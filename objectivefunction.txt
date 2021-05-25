@@ -1,0 +1,14 @@
+# Expected Output
+timeStart 0.0
+timeEnd 1.25
+numberOfPoints 9
+5
+30.0
+5
+30.0
+5
+30.0
+5
+30.0
+5
+
