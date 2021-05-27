@@ -95,7 +95,7 @@ import matplotlib.pyplot as plt
 parent_dir = "C:\\Users\\tatka\\Desktop\\Models"
 trim_dir = "C:\\Users\\tatka\\Desktop\\Models\\TRIMMED"
 directory = "C:\\Users\\tatka\\Desktop\\Models\\PASS"
-save_dir = "C:\\Users\\tatka\\Desktop\\Models\\TRIM_choose2"
+save_dir = "C:\\Users\\tatka\\Desktop\\Models\\TRIM_choose3"
 
 percentSuccess = []
 
@@ -148,7 +148,11 @@ for filename in os.listdir(directory):
         for i in range(len(status)):
             if not status[i]:
                 indices.append(i + start) # add start value to get the index in the antimony model
-        combos = choose(indices, 2) # all possible combos of 2 non essential reactions
+
+
+
+        ## SAME UP TO HERE
+        combos = choose(indices, 3) # all possible combos of 2 non essential reactions
         os.chdir(save_dir)
         savePath = os.path.join(save_dir, filename[:-4])
         count = 0
@@ -158,6 +162,9 @@ for filename in os.listdir(directory):
             lines = copy.deepcopy(originalModel)
             lines[combos[i][0]] = '#' + lines[combos[i][0]]
             lines[combos[i][1]] = '#' + lines[combos[i][1]]
+            lines[combos[i][2]] = '#' + lines[combos[i][2]]
+
+        ## AND SAME AGAIN
             antstr = '\n'.join(lines)
             r = te.loada(antstr)
             try:
@@ -203,7 +210,9 @@ for filename in os.listdir(directory):
             f.write(f'ancestor = {filename[:-4]}\n')
             f.write(f'total reactions = {len(status)}\n')
             f.write(f'non essential reactions = {len(indices)}\n')
-            f.write(f'total 2 reaction combos: {nChooseK(len(indices), 2)}\n')
+            f.write(f'start = {start}\n')
+            f.write(f'indices = {indices}\n')
+            f.write(f'total 3 reaction combos: {nChooseK(len(indices), 3)}\n')
             f.write(f'successful trims = {successes}\n')
             f.close()
         percentSuccess.append(successes/nChooseK(len(indices), 2))
@@ -221,6 +230,141 @@ for filename in os.listdir(directory):
 with open(os.path.join(save_dir, 'percent_success.txt'), "w") as f:
     f.write(f'average success rate = {sum(percentSuccess)/len(percentSuccess)}\n')
     f.close()
+
+# TRIM 2 reactions at a time
+# parent_dir = "C:\\Users\\tatka\\Desktop\\Models"
+# trim_dir = "C:\\Users\\tatka\\Desktop\\Models\\TRIMMED"
+# directory = "C:\\Users\\tatka\\Desktop\\Models\\PASS"
+# save_dir = "C:\\Users\\tatka\\Desktop\\Models\\TRIM_choose2"
+#
+# percentSuccess = []
+#
+# for filename in os.listdir(directory):
+#     os.chdir(directory)
+#     try:
+#         # Open the zip file
+#         zf = readSavedRun(os.path.join(directory, filename))
+#         # Pull out the antimony model
+#         ant = readModel(zf, numGenerations - 1, 0)
+#         zf.close()
+#
+#         # split into lines but ignore the first line which is a comment
+#         lines = ant.splitlines()[1:]
+#
+#         # Get the start and end of the reactions lines
+#         start = findStart(lines)
+#         end = findEnd(lines) - 1
+#
+#         # We'll keep an unmodified copy of the model
+#         originalModel = copy.deepcopy(lines)
+#
+#         count = 1
+#         # Create a status array, entry of False means this reaction
+#         # is not important and can be removed
+#         status = [False] * ((end + 1) - start)
+#         for variant in range(start, end + 1):
+#             lines = copy.deepcopy(originalModel)
+#             lines[variant] = '#' + lines[variant]
+#             antstr = '\n'.join(lines)
+#             r = te.loada(antstr)
+#             try:
+#                 m = r.simulate(0, 100, 100)
+#                 peaks, _ = find_peaks(m[:, 2], prominence=1)
+#                 if len(peaks) == 0:
+#                     status[variant - start] = True
+#                 else:
+#                     # It could be damped
+#                     m = r.simulate(0, 10, 500)
+#                     peaks, _ = find_peaks(m[:, 2], prominence=1)
+#                     if len(peaks) == 0:
+#                         status[variant - start] = True
+#                 count += 1
+#                 # If roadrunner crashes then the reaction must be important
+#             except Exception as err:
+#                 status[variant - start] = True
+#                 count += 1
+#         # Get locations of non-essential reactions
+#         indices = []
+#         for i in range(len(status)):
+#             if not status[i]:
+#                 indices.append(i + start) # add start value to get the index in the antimony model
+#         combos = choose(indices, 2) # all possible combos of 2 non essential reactions
+#         os.chdir(save_dir)
+#         savePath = os.path.join(save_dir, filename[:-4])
+#         count = 0
+#         successes = 0
+#         # Remove every combo of reactions and test
+#         for i in range(len(combos)):
+#             lines = copy.deepcopy(originalModel)
+#             lines[combos[i][0]] = '#' + lines[combos[i][0]]
+#             lines[combos[i][1]] = '#' + lines[combos[i][1]]
+#             antstr = '\n'.join(lines)
+#             r = te.loada(antstr)
+#             try:
+#                 m = r.simulate(0, 100, 100)
+#                 peaks, _ = find_peaks(m[:,2], prominence=1)
+#                 if len(peaks) > 0:
+#                     m = r.simulate(0, 10, 500)
+#                     peaks2, _ = find_peaks(m[:, 2], prominence=1)
+#                     if len(peaks2) > 0:
+#                         # If we got here, then the model oscillates and is not damped, so we save it
+#                         # If a save folder for the ancestor model doesn't already exist, make it
+#                         successes += 1
+#                         if not os.path.isdir(savePath):
+#                             os.mkdir(savePath)
+#                         os.chdir(savePath)
+#                         with open(filename[6:-4]+'_'+str(count)+'.ant', "w") as f:
+#                             count += 1
+#                             f.write(antstr)
+#                             f.close()
+#                 # Let's save it even if it fails because it might be interesting to see which reactions broke it
+#                 if len(peaks) == 0 or len(peaks2) == 0:
+#                     if not os.path.isdir(savePath):
+#                         os.mkdir(savePath)
+#                     os.chdir(savePath)
+#                     with open('FAIL_' + filename[6:-4] + '_' + str(count) + '.ant', "w") as f:
+#                         count += 1
+#                         f.write(antstr)
+#                         f.close()
+#             except Exception:
+#                 if not os.path.isdir(savePath):
+#                     os.mkdir(savePath)
+#                 os.chdir(savePath)
+#                 with open('FAIL_' + filename[6:-4] + '_' + str(count) + '.ant', "w") as f:
+#                     count += 1
+#                     f.write(antstr)
+#                     f.close()
+#         savePath = os.path.join(save_dir, filename[:-4])
+#         # If a save folder for the ancestor model doesn't already exist, make it
+#         if not os.path.isdir(savePath):
+#             os.mkdir(savePath)
+#         os.chdir(savePath)
+#         with open(filename[6:-4] + '_' + str(count) + '_summary.txt', "w") as f:
+#             f.write(f'ancestor = {filename[:-4]}\n')
+#             f.write(f'total reactions = {len(status)}\n')
+#             f.write(f'non essential reactions = {len(indices)}\n')
+#             f.write(f'total 2 reaction combos: {nChooseK(len(indices), 2)}\n')
+#             f.write(f'successful trims = {successes}\n')
+#             f.close()
+#         percentSuccess.append(successes/nChooseK(len(indices), 2))
+#         # # Zip it up
+#         # os.chdir(save_dir)
+#         # with zipfile.ZipFile(filename, "w") as newzip:
+#         #     for file in os.listdir(savePath):
+#         #         newzip.write(file)
+#         #     newzip.close()
+#         # shutil.rmtree(savePath)
+#     except Exception:
+#         pass
+#
+#
+# with open(os.path.join(save_dir, 'percent_success.txt'), "w") as f:
+#     f.write(f'average success rate = {sum(percentSuccess)/len(percentSuccess)}\n')
+#     f.close()
+
+
+
+### TRIM ALL NON ESSENTIAL REACTIONS
 """
 # parent_dir = "C:\\Users\\tatka\\Desktop\\Models"
 # trim_dir = "C:\\Users\\tatka\\Desktop\\Models\TRIMMED"
