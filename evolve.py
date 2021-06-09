@@ -391,8 +391,23 @@ def pause():
 
 # ---------------------------------------------------------------------
 
-defaultConfig = {"maxGenerations": 450,
-          "sizeOfPopulation": 100,
+## This is the real default config
+# defaultConfig = {"maxGenerations": 450,
+#           "sizeOfPopulation": 100,
+#           "numSpecies": 10,
+#           "numReactions": 14,
+#           "rateConstantScale": 50,
+#           "probabilityMutateRateConstant": 0.7, # 0.9 much worse
+#           "percentageCloned": 0.1,
+#           "percentageChangeInParameter": 0.15,
+#           "seed": -1,  # means no specific seed
+#           "threshold": 10.5, # a fitness below this we stop
+#           "frequencyOfOutput": 10,
+#           "multi": {"item 1": "item 2"},
+#           "key2": "value2"}
+
+defaultConfig = {"maxGenerations": 1,
+          "sizeOfPopulation": 1000,
           "numSpecies": 10,
           "numReactions": 14,
           "rateConstantScale": 50,
@@ -402,7 +417,7 @@ defaultConfig = {"maxGenerations": 450,
           "seed": -1,  # means no specific seed
           "threshold": 10.5, # a fitness below this we stop
           "frequencyOfOutput": 10,
-          "multi": {"item 1": "item 2"}, 
+          "multi": {"item 1": "item 2"},
           "key2": "value2"}
 
 seed = -1; maxGenerations = -1
