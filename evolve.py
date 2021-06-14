@@ -369,7 +369,7 @@ def plotFitnesssFromFile (fileName):
 
 def displayFitness (population):
     for p in population:
-        primportnt (p.fitness)
+        print (p.fitness)
         
 def test(tag):
     if gen == 7:

@@ -2,10 +2,11 @@ import numpy as np
 import os
 import zipfile
 import cleanUpMethods as clean
+import pandas as pd
 
-
-directory = "C:\\Users\\tatka\\Desktop\\Models\\TEST"
+directory = "C:\\Users\\tatka\\Desktop\\Models\\core_models"
 isZipFile = False
+csv = 'C:\\Users\\tatka\\Desktop\\Models\\summaryv2.csv'
 
 os.chdir(directory)
 
@@ -37,8 +38,6 @@ def avg(items):
 count = 0
 for filename in os.listdir(directory):
     os.chdir(directory)
-    if count%10 == 0:
-        print(f"working on model {count}...")
     count +=1
     if isZipFile:
         if filename.endswith('zip'):
@@ -92,7 +91,6 @@ for filename in os.listdir(directory):
             elif rxnType == 'bi-uni':
                 biuni += 1
             else:
-                print(rxnType)
                 bibi += 1
 
             # Look for "special" reactions
@@ -127,7 +125,6 @@ for filename in os.listdir(directory):
                 # If the reaction is bi-bi and one of the substrates is also in the product AND the other product is
                 # NOT in the substrate at all = catalysis (X + Y -> X + Z) or (X + X -> X + Y)
             elif rxnType == 'bi-bi':
-                print(f'{s1} + {s2} -> {p1} + {p2}')
                 if s1 == p1 and p2 not in substrates:
                     catalysis += 1
                 elif s1 == p2 and p1 not in substrates:
@@ -225,3 +222,43 @@ for filename in os.listdir(os.path.join(directory,'summaries')):
         except FileNotFoundError:
             continue
 
+# Update summary CSV file
+
+df = pd.read_csv(csv, index_col='rows')
+if 'FAIL' in directory:
+    col = 'FAIL'
+    stdCol = 'fail std'
+elif 'core' in directory:
+    col = 'Core'
+    stdCol = 'core std'
+elif 'DAMPED' in directory:
+    col = 'DAMPED'
+    stdCol = 'damped std'
+elif 'oscillator' in directory:
+    col = 'Oscillators'
+    stdCol = 'oscillator std'
+elif 'random' in directory:
+    col = 'Random'
+    stdCol = 'random std'
+
+df.loc['Total Reactions (avg)', col] = avg(all_nReactions)
+df.loc['Total Models', col] = len(all_uniuni)
+
+df.loc['uni-uni', col] = avg(all_uniuni)
+df.loc['uni-uni', stdCol] = np.std(all_uniuni)
+
+df.loc['uni-bi', col] = avg(all_unibi)
+df.loc['uni-bi', stdCol] = np.std(all_unibi)
+
+df.loc['uni-uni', col] = avg(all_uniuni)
+df.loc['uni-uni', stdCol] = np.std(all_uniuni)
+
+df.loc['uni-uni', col] = avg(all_uniuni)
+df.loc['uni-uni', stdCol] = np.std(all_uniuni)
+
+
+
+
+
+
+# df.to_csv(csv,mode='a', header=False)
