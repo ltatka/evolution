@@ -5,6 +5,12 @@ Created on Tue Apr 27 20:52:33 2021
 @author: hsauro
 """
 
+# Wierd issue with macos: https://github.com/ray-project/ray/issues/5250
+# importing numba after some other packages causes bug. So we move the numba import
+# to top of the execution stack and hope the problem goes away.
+#   https://github.com/numba/numba/issues/4256
+from numba import jit
+
 import tellurium as te
 import roadrunner
 import teUtils as tu
@@ -422,7 +428,9 @@ if __name__ == "__main__":
               "multi": {"item 1": "item 2"},
               "key2": "value2"}
 
-    seed = -1; maxGenerations = -1
+    # todo you should use argparse for this in python. Its waaaaay easier and standard practice.
+    seed = -1
+    maxGenerations = -1
     newConfigFile = ''
     argv = sys.argv[1:]
     options, args = getopt.getopt(argv, 's:g:c:hv', [])
