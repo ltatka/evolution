@@ -1,0 +1,3 @@
+[submodule "sundials"]
+	path = sundials
+	url = https://github.com/LLNL/sundials.git
