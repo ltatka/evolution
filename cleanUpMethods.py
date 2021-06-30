@@ -63,23 +63,26 @@ def isModelDampled(antstr):
     dampled = False
     r = te.loada(antstr)
     try:
-        m = r.simulate(0, 100, 100)
+        m = r.simulate(0, 100, 1000)
         peaks, _ = find_peaks(m[:, 2], prominence=1)
-        if len(peaks) == 0:
-            dampled = True
+        nPeaks = len(peaks)
+        print(f"100sec peaks: {nPeaks}")
+        if nPeaks <= 4:
+            return True
         else:
             # It could be damped
             try:
-                m = r.simulate(0, 10, 500)
+                m = r.simulate(0, 1000, 5000)
                 peaks, _ = find_peaks(m[:, 2], prominence=1)
-                if len(peaks) == 0:
-                    dampled = True
+                nPeaks2 = len(peaks)
+                print(nPeaks2)
+                if nPeaks2 ==0 or nPeaks2<= nPeaks*3:
+                    return True
 
             except Exception:
-                dampled = True
-
+                return True
     except Exception:
-        dampled = True
+        return True
     return dampled
 
 
@@ -136,8 +139,9 @@ def loadNonEssRxnDict(path):
 
 def loadAntimonyText(path):
     with open(path, "r") as f:
-        lines = f.readlines()
+        ant = f.read()
         f.close()
+    lines = ant.split('\n')
     # First line is comment for fitness, ignore
     if lines[0].startswith('#'):
         lines = lines[1:]
@@ -149,3 +153,14 @@ def loadAntimonyText_noLines(path):
         ant = f.read()
         f.close()
     return ant
+
+def getNumReactions(ant):
+    # Takes a list of strings for each line in ant file
+    nReactions = 0
+    for line in ant:
+        if not line.startswith('var'):
+            if line.startswith('k'):
+                break
+            nReactions += 1
+    return nReactions
+
