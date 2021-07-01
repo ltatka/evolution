@@ -1,6 +1,5 @@
 # evolution
-
-cringe and bluepilled
+cringe.
 
 
 # Build sundials 
