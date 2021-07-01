@@ -3,6 +3,7 @@ import roadrunner
 import copy, sys, os, math, getopt, json, time, zipfile, shutil
 from scipy.signal import find_peaks
 import json
+import numpy as np
 
 
 def readSavedRun(fileName):
@@ -15,11 +16,11 @@ def readSavedRun(fileName):
     # print ("Size of population in each generation =", numPopulation)
     return zf
 
+
 def getNumGenerations(zip_file):
     data = zip_file.read('summary.txt').decode("utf-8")
     data = data.splitlines()
     return int(data[5].split('=')[1])
-
 
 
 def readModel(zf, generation, individual):
@@ -30,6 +31,7 @@ def readModel(zf, generation, individual):
         ant = ant[1:]
     zf.close()
     return ant
+
 
 def test_readModel():
     zf = readSavedRun("C:\\Users\\tatka\\Desktop\\Models\\FAIL\\FAIL_Model_128987634590189990.zip")
@@ -59,7 +61,7 @@ def countEig(eig):
 
 
 # Return True if the model is damped
-def isModelDampled(antstr):
+def isModelDampled_OLD(antstr):
     dampled = False
     r = te.loada(antstr)
     try:
@@ -76,7 +78,11 @@ def isModelDampled(antstr):
                 peaks, _ = find_peaks(m[:, 2], prominence=1)
                 nPeaks2 = len(peaks)
                 print(nPeaks2)
-                if nPeaks2 ==0 or nPeaks2<= nPeaks*3:
+                if nPeaks2 == 0 or nPeaks2 <= nPeaks * 3:
+                    m = r.simulate(500, 600, 1000)
+                    peaks, _ = find_peaks(m[500:, 2], prominence=1)
+                    nPeaks3 = len(peaks)
+                    print(nPeaks3)
                     return True
 
             except Exception:
@@ -84,6 +90,32 @@ def isModelDampled(antstr):
     except Exception:
         return True
     return dampled
+
+''' I think I need to totally rewrite this so it looks at every species for oscillation and damped'''
+
+# Return True if the model is damped
+def isModelDampled(antstr):
+
+    r = te.loada(antstr)
+    try:
+        m1 = r.simulate(0, 100, 1000)
+        m2 = r.simulate(0, 1000, 5000)
+    except Exception:
+        return True
+    _, col = np.shape(m1)
+    #Look at each species:
+    for i in range(1, col):
+        peaks1, _ = find_peaks(m1[:, i], prominence=1)
+        # If there are too few peaks, move on to next species
+        # Otherwise simulate longer to check for damping
+        if len(peaks1) < 4:
+            continue
+        peaks2, _ = find_peaks(m2[:, i], prominence=1)
+        if len(peaks2) < 2 * len(peaks1):
+            continue
+        else:
+            return False # If we get this far, it's NOT damped
+    return True # DAMPED
 
 
 def choose_iter(elements, length):
@@ -100,7 +132,8 @@ def choose(l, k):
 
 
 def nChooseK(n, k):
-    return int(math.factorial(n)/ (math.factorial(k) * math.factorial(n-k)))
+    return int(math.factorial(n) / (math.factorial(k) * math.factorial(n - k)))
+
 
 def stringToList(indices):
     indices = indices.split(', ')
@@ -110,6 +143,7 @@ def stringToList(indices):
     for i in range(len(indices)):
         indices[i] = int(indices[i])
     return indices
+
 
 def makeNonEssRxnDict(modelPath, savePath):
     # e.g. file = './data.json'
@@ -132,10 +166,12 @@ def makeNonEssRxnDict(modelPath, savePath):
     with open(os.path.join(modelPath, 'oscillators_dict.json'), 'w') as f:
         json.dump(indices_dict, f)
 
+
 def loadNonEssRxnDict(path):
     with open(path, 'r') as f:
         idx_dict = json.load(f)
     return idx_dict
+
 
 def loadAntimonyText(path):
     with open(path, "r") as f:
@@ -147,12 +183,14 @@ def loadAntimonyText(path):
         lines = lines[1:]
     return lines
 
+
 def loadAntimonyText_noLines(path):
     # THIS WILL INCLUDE THE FIRST COMMENTED LINE!
     with open(path, "r") as f:
         ant = f.read()
         f.close()
     return ant
+
 
 def getNumReactions(ant):
     # Takes a list of strings for each line in ant file
@@ -163,4 +201,3 @@ def getNumReactions(ant):
                 break
             nReactions += 1
     return nReactions
-
