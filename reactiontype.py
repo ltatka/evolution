@@ -3,9 +3,10 @@ import os
 import zipfile
 import cleanUpMethods as clean
 import pandas as pd
+from datetime import datetime
 
-directory = "C:\\Users\\tatka\\Desktop\\Models\\core_models"
-isZipFile = False
+directory = "C:\\Users\\tatka\\Desktop\\Models\\FAIL"
+isZipFile = True
 csv = 'C:\\Users\\tatka\\Desktop\\Models\\summaryv2.csv'
 
 os.chdir(directory)
@@ -40,7 +41,7 @@ for filename in os.listdir(directory):
     os.chdir(directory)
     count +=1
     if isZipFile:
-        if filename.endswith('zip'):
+        if filename.endswith('zip') and filename.startswith('FAIL'):
             zf = clean.readSavedRun(os.path.join(directory, filename))
             numGenerations = clean.getNumGenerations(zf)
             # Pull out the antimony model
@@ -225,6 +226,8 @@ for filename in os.listdir(os.path.join(directory,'summaries')):
 # Update summary CSV file
 
 df = pd.read_csv(csv, index_col='rows')
+
+
 if 'FAIL' in directory:
     col = 'FAIL'
     stdCol = 'fail std'
@@ -234,7 +237,7 @@ elif 'core' in directory:
 elif 'DAMPED' in directory:
     col = 'DAMPED'
     stdCol = 'damped std'
-elif 'oscillator' in directory:
+elif 'OSCILLATOR' in directory:
     col = 'Oscillators'
     stdCol = 'oscillator std'
 elif 'random' in directory:
@@ -250,15 +253,63 @@ df.loc['uni-uni', stdCol] = np.std(all_uniuni)
 df.loc['uni-bi', col] = avg(all_unibi)
 df.loc['uni-bi', stdCol] = np.std(all_unibi)
 
-df.loc['uni-uni', col] = avg(all_uniuni)
-df.loc['uni-uni', stdCol] = np.std(all_uniuni)
+df.loc['bi-uni', col] = avg(all_biuni)
+df.loc['bi-uni', stdCol] = np.std(all_biuni)
 
-df.loc['uni-uni', col] = avg(all_uniuni)
-df.loc['uni-uni', stdCol] = np.std(all_uniuni)
+df.loc['bi-bi', col] = avg(all_bibi)
+df.loc['bi-bi', stdCol] = np.std(all_bibi)
 
+# Special Reactions (absolute)
+df.loc['synthesis', col] = avg(all_synthesis)
+df.loc['synthesis', stdCol] = np.std(all_synthesis)
 
+df.loc['autocatalysis', col] = avg(all_autocatalysis)
+df.loc['autocatalysis', stdCol] = np.std(all_autocatalysis)
 
+df.loc['degradation', col] = avg(all_degradation)
+df.loc['degradation', stdCol] = np.std(all_degradation)
 
+df.loc['catalysis', col] = avg(all_catalysis)
+df.loc['catalysis', stdCol] = np.std(all_catalysis)
 
+# Reaction portions
+df.loc['uni-uni portion', col] = avg(all_uniuni_portion)
+df.loc['uni-uni portion', stdCol] = np.std(all_uniuni_portion)
 
-# df.to_csv(csv,mode='a', header=False)
+df.loc['uni-bi portion', col] = avg(all_unibi_portion)
+df.loc['uni-bi portion', stdCol] = np.std(all_unibi_portion)
+
+df.loc['bi-uni portion', col] = avg(all_biuni_portion)
+df.loc['bi-uni portion', stdCol] = np.std(all_biuni_portion)
+
+df.loc['bi-bi portion', col] = avg(all_bibi_portion)
+df.loc['bi-bi portion', stdCol] = np.std(all_bibi_portion)
+
+# special reaction portions
+df.loc['synthesis portion', col] = avg(all_synthesis_portion)
+df.loc['synthesis portion', stdCol] = np.std(all_synthesis_portion)
+
+df.loc['autocatalysis portion', col] = avg(all_autocatalysis_portion)
+df.loc['autocatalysis portion', stdCol] = np.std(all_autocatalysis_portion)
+
+df.loc['degradation portion', col] = avg(all_degradation_portion)
+df.loc['degradation portion', stdCol] = np.std(all_degradation_portion)
+
+df.loc['catalysis portion', col] = avg(all_catalysis_portion)
+df.loc['catalysis portion', stdCol] = np.std(all_catalysis_portion)
+
+# NO tallies
+df.loc['NO synthesis', col] = noSynthesis
+df.loc['NO synthesis', stdCol] = noSynthesis/len(all_uniuni)
+df.loc['NO catalysis', col] = noCatalysis
+df.loc['NO catalysis', stdCol] = noCatalysis/len(all_uniuni)
+df.loc['NO degradation', col] = noDegradation
+df.loc['NO degradation', stdCol] = noDegradation/len(all_uniuni)
+df.loc['NO autocatalysis', col] = noAutocatalysis
+df.loc['NO autocatalysis', stdCol] = noAutocatalysis/len(all_uniuni)
+
+# Note time and date of most recent update
+now = datetime.now()
+dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+df.loc['last update', col] = dt_string
+df.to_csv(csv, mode='w')

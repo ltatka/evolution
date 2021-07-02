@@ -13,11 +13,11 @@ import json
 errors = []
 
 failures = 0
-directory = "C:\\Users\\tatka\\Desktop\\Models\\OSCILLATOR"
-dict_path = "C:\\Users\\tatka\\Desktop\\Models\\OSCILLATOR\\oscillators_dict.json"
+directory = "C:\\Users\\tatka\\Desktop\\Models\\3node_oscillator"
+dict_path = "C:\\Users\\tatka\\Desktop\\Models\\3node_oscillator\\oscillators_dict.json"
 
-idx_dict = clean.loadNonEssRxnDict(dict_path)
-print(len(idx_dict))
+idx_dict = {}#clean.loadNonEssRxnDict(dict_path)
+
 
 
 for filename in os.listdir(directory):

@@ -91,11 +91,23 @@ def isModelDampled_OLD(antstr):
         return True
     return dampled
 
-''' I think I need to totally rewrite this so it looks at every species for oscillation and damped'''
+def check_infinity(result):
+    row, col = np.shape(result)
+    # find max value at end
+    max= 0
+    for i in range(1, col):
+        if result[row-1, i] > max:
+            max = result[row-1, i]
+            maxCol = i
+    peaks, _ = find_peaks(result[:, i], prominence=1)
+    for i in range(len(peaks)-1):
+        if result[i, maxCol] > result[i+1, maxCol]:
+            return False
+    return True
 
 # Return True if the model is damped
 def isModelDampled(antstr):
-
+    goesToInf = None
     r = te.loada(antstr)
     try:
         m1 = r.simulate(0, 100, 1000)
@@ -103,7 +115,9 @@ def isModelDampled(antstr):
     except Exception:
         return True
     _, col = np.shape(m1)
+    goesToInf = check_infinity(m2)
     #Look at each species:
+    print(f'Goes to infinity: {check_infinity(m2)}')
     for i in range(1, col):
         peaks1, _ = find_peaks(m1[:, i], prominence=1)
         # If there are too few peaks, move on to next species
@@ -111,11 +125,16 @@ def isModelDampled(antstr):
         if len(peaks1) < 4:
             continue
         peaks2, _ = find_peaks(m2[:, i], prominence=1)
-        if len(peaks2) < 2 * len(peaks1):
+        if len(peaks2) < 2: #* len(peaks1):
             continue
         else:
+
             return False # If we get this far, it's NOT damped
     return True # DAMPED
+
+
+
+
 
 
 def choose_iter(elements, length):
