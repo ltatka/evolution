@@ -8,22 +8,48 @@ import zipfile
 
 
 
-parent_dir = "C:\\Users\\tatka\\Desktop\\Models\\Archive\\DAMPED"
-damp_dir = "C:\\Users\\tatka\\Desktop\\Models\\still_damped2"
-pass_dir = "C:\\Users\\tatka\\Desktop\\Models\\oscillatorOrNo2"
+parent_dir = "C:\\Users\\tatka\\Desktop\\Models\\TEST"
+
+damp_dir = os.path.join(parent_dir, "Damped")
+pass_dir = os.path.join(parent_dir, "Oscillate")
+pass_inf = os.path.join(pass_dir, "Infinity")
+damp_inf = os.path.join(damp_dir, "Infinity")
+pass_unk = os.path.join(damp_dir, "unknown")
+damp_unk = os.path.join(damp_dir, "unknown")
 #
 #
+
+def checkMakeDir(dir, parent):
+    if not os.path.isdir(dir):
+        os.mkdir(dir)
+        os.chdir(parent)
+
+
 if not os.path.isdir(damp_dir):
     os.mkdir(damp_dir)
+    os.chdir(parent_dir)
 if not os.path.isdir(pass_dir):
     os.mkdir(pass_dir)
+    os.chdir(parent_dir)
+if not os.path.isdir(damp_inf):
+    os.mkdir(damp_inf)
+    os.chdir(parent_dir)
+if not os.path.isdir(pass_inf):
+    os.mkdir(pass_inf)
+    os.chdir(parent_dir)
+if not os.path.isdir(damp_unk):
+    os.mkdir(damp_unk)
+    os.chdir(parent_dir)
+if not os.path.isdir(pass_unk):
+    os.mkdir(pass_unk)
+    os.chdir(parent_dir)
 
-failures_present = False
+
+
 total_processed = 0
 total_damped = 0
 
 os.chdir(parent_dir)
-
 
 
 count = 0
@@ -38,34 +64,47 @@ for filename in os.listdir(parent_dir):
         continue
     ant = clean.loadAntimonyText_noLines(filename)
     try:
-        isDamped = clean.isModelDampled(ant)
+        isDamped, toInf = clean.isModelDampled(ant)
         if isDamped:
             total_damped += 1
             os.chdir(damp_dir)
+            inf_dir = damp_inf
+            unk_dir = damp_unk
         else:
             os.chdir(pass_dir)
+            inf_dir = pass_inf
+            unk_dir = pass_unk
+        if isDamped and toInf:
+            os.chdir(damp_inf)
+        elif isDamped and toInf == 'unknown':
+            os.chdir(damp_unk)
+        elif isDamped and not toInf:
+            os.chdir(damp_dir)
+        elif not isDamped and toInf:
+            os.chdir(pass_inf)
+        elif not isDamped and toInf == 'unknown':
+            os.chdir(pass_unk)
+        elif not isDamped and not toInf:
+            os.chdir(pass_dir)
+
+
         with open(f'{filename}', "w") as f:
             f.write(ant)
             f.close()
             total_processed += 1
-    except:
-        failures_present = True
-        # with open(f'damped-analysis_failures.txt', "a") as f:
-        #     f.write(f'{filename}: Could not run isDamped()\n')
-        #     f.close()
-        #     total_processed += 1
+
+    except Exception as e:
+        print(f"Fail: {filename}\n{e}")
 
 
 print(f'Processed {total_processed} models and found {total_damped} damped models.')
 
-os.chdir("C:\\Users\\tatka\\Desktop\\Models\\10node_damped3")
-ant = clean.loadAntimonyText_noLines("Model_dmp_7253473462086677874.ant")
-# os.chdir("C:\\Users\\tatka\\Desktop\\Models\\still_damped2")
-# ant = clean.loadAntimonyText_noLines("Model_5411153700147990948.ant")
+#
+# ant = clean.loadAntimonyText_noLines("C:\\Users\\tatka\\Desktop\\Models\\TEST\\osc4.ant")
 
 # r = te.loada(ant)
 # m = r.simulate(0,100,1000)
-# print(clean.check_infinity(m))
+# clean.check_infinity(m)
 #
 #
 # damped = clean.isModelDampled(ant)
