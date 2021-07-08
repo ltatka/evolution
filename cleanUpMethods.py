@@ -16,6 +16,10 @@ def readSavedRun(fileName):
     # print ("Size of population in each generation =", numPopulation)
     return zf
 
+def extractAnt(zip):
+    zf = zipfile.ZipFile(zip, 'r')
+    ant = zf.read('best_antimony.ant').decode("utf-8")
+    return ant
 
 def getNumGenerations(zip_file):
     data = zip_file.read('summary.txt').decode("utf-8")
