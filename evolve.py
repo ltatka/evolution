@@ -26,7 +26,7 @@ from uModel import TReaction
 from pprint import pprint
 from datetime import date
 from datetime import datetime
-import keyboard
+# import keyboard
 
 from uLoadCvode import TCvode
 import uLoadCvode
@@ -555,9 +555,9 @@ if __name__ == "__main__":
                 amodel.reactions[n].rateConstant += change;
               newPopulation.append (amodel)
 
-            if keyboard.is_pressed("ctrl+q"):
-              print ("keyboard break")
-              sys.exit()
+            # if keyboard.is_pressed("ctrl+q"):
+            #   print ("keyboard break")
+            #   sys.exit()
 
         population = newPopulation
         savePopulation (gen, population)

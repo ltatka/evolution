@@ -13,16 +13,19 @@ CV_SUCCESS = 0
 # sundials is a submodule.
 PROJ_ROOT = dirname(__file__)  # top level root directory
 SUNDIALS_SRC = join(PROJ_ROOT, "sundials")  # sundials source directory
-SUNDIALS_INSTALL_PREFIX = join(SUNDIALS_SRC, f"sundials-install-{platform}")
-if not isdir(SUNDIALS_INSTALL_PREFIX):
-    raise ValueError("""
-You need to install sundials using cmake. Use: 
+#SUNDIALS_INSTALL_PREFIX = join(SUNDIALS_SRC, f"sundials-install-{platform}")
+SUNDIALS_INSTALL_PREFIX = "/home/hellsbells/evolution/sundials-install-linux"
 
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
-    cmake --build . --target install --config Release -j 12
-
-where platform is the output from sys.platform in Python. 
-""")
+# print(SUNDIALS_INSTALL_PREFIX)
+# if not isdir(SUNDIALS_INSTALL_PREFIX):
+#     raise ValueError("""
+# You need to install sundials using cmake. Use:
+#
+#     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
+#     cmake --build . --target install --config Release -j 12
+#
+# where platform is the output from sys.platform in Python.
+# """)
 
 SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib")
 
