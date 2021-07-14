@@ -130,9 +130,13 @@ def addReaction(model):
         reaction.reactant2 = r1[1]
         reaction.product1 = p1[0]
     if currentConfig["massConserved"] == True:
+        count = 0
         while reaction.product1 == reaction.reactant1 or reaction.product1 == reaction.reactant2:
             p1 = [random.choice(floats)]
             reaction.product1 = p1[0]
+            count += 1
+            if count > 50:  # quit trying after 50 attempts
+                return model
 
     if rt == tu.buildNetworks.TReactionType.UNIBI:
         r1 = [random.choice(floats)]
@@ -141,9 +145,13 @@ def addReaction(model):
         reaction.product1 = p1[0]
         reaction.product2 = p1[1]
     if currentConfig["massConserved"] == True:
+        count += 1
         while reaction.reactant1 == reaction.product1 or reaction.reactant1 == reaction.product2:
             r1 = [random.choice(floats)]
             reaction.reactant1 = r1[0]
+            count += 1
+            if count > 50:  # quit trying after 50 attempts
+                return model
 
     if rt == tu.buildNetworks.TReactionType.BIBI:
         r1 = [random.choice(floats), random.choice(floats)]
@@ -450,10 +458,10 @@ if __name__ == "__main__":
     #           "multi": {"item 1": "item 2"},
     #           "key2": "value2"}
 
-    defaultConfig = {"maxGenerations": 20,
-                     "massConserved": False,
+    defaultConfig = {"maxGenerations": 450,
+                     "massConserved": True,
                      "toZip": False,
-                     "sizeOfPopulation": 3,
+                     "sizeOfPopulation": 40,
                      "numSpecies": 3,
                      "numReactions": 9,
                      "rateConstantScale": 50,
@@ -606,11 +614,14 @@ if __name__ == "__main__":
     print('\n')
     if newPopulation[0].fitness < 100:
         print("Success.......")
-        saveFileName = "Model_" + str(seed) + ".zip"
-        print("Saving entire state to --- ", saveFileName)
+
         if defaultConfig["toZip"]:
+            saveFileName = "Model_" + str(seed) + ".zip"
+            print("Saving entire state to --- ", saveFileName)
             saveRun(seed, saveFileName)
         else:
+            saveFileName = "Model_" + str(seed) + ".ant"
+            print("Saving entire state to --- ", saveFileName)
             astr = evolUtils.convertToAntimony2(newPopulation[0])
             with open(saveFileName, "w") as f:
                 f.write(astr)
