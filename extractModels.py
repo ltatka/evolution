@@ -1,30 +1,35 @@
 import sys
-import os
-import mongoMethods as mm
 import cleanUpMethods as clean
+import os
 
-num_nodes = int(sys.argv[-2])
-oscillator = bool(sys.argv[-1])
+'''
+This script extracts models from zip files in the given directory. 
+If you want to extract AND add models to the databse, use extract_add_models.py.
+'''
 
-total = len(sys.argv[1:-2])
+'''
+Args:
+0: ./ extractModels.py
+1: Source path
+-1: destination path
+'''
+
+dest_dir = sys.argv[-1]
+
+
+
+total = len(sys.argv[1:-1])
 
 count = 0
-for file in sys.argv[1:-2]:
+for file in sys.argv[1:-1]:
     try:
+        os.chdir(dest_dir)
         ant = clean.extractAnt(file)
-        num_reactions = mm.get_nReactions(ant)
-        filename = file.split('/')[-1]
-        ID = mm.extract_id(filename)
-        dictionary = {
-            'ID' : ID,
-            'num_nodes' : num_nodes,
-            'num_reactions' : num_reactions,
-            'oscillator' : oscillator,
-            'model' : ant
-        }
-        mm.add_one(dictionary)
+        with open(f'{file[:-4]}.ant', "w") as f:
+            f.write(ant)
+            f.close()
         count += 1
     except:
         continue
 
-print(f"Added {count} of {total} models")
+print(f"extracted {count} of {total} models")
