@@ -1,4 +1,5 @@
 import os
+import tellurium as te
 from pymongo import MongoClient
 import warnings
 
@@ -119,6 +120,24 @@ def query_database(query):
     print(f'Found {cur.count()} matching entries.')
     return collection.find(query)
 
+
+def get_sbml(query, sbml_path):
+    id_list = get_ids(query)
+    if not os.path.exists(sbml_path) or not os.path.isdir(sbml_path):
+        os.mkdir(sbml_path)
+    total = len(id_list)
+    count = 0
+    for id in id_list:
+        try:
+            ant = get_antimony({"ID": id})
+            r = te.loada(ant)
+            r.exportToSBML(f"{os.path.join(sbml_path, id)}.sbml")
+            count += 1
+        except:
+            continue
+    print(f"Exported {count} of {total} models to {sbml_path}")
+
+
 def get_ids(query):
     '''
     Get the IDs of models that match the query
@@ -158,6 +177,11 @@ def get_antimony(query):
         return result[0]
     else:
         return result
+
+
+
+
+
 
 
 def yes_or_no(question):
