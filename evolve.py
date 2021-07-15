@@ -532,7 +532,7 @@ if __name__ == "__main__":
     # seed = 456789
     random.seed(seed)
 
-    tu.buildNetworks.Settings.allowMassViolatingReactions = True
+    tu.buildNetworks.Settings.allowMassViolatingReactions = not currentConfig['massConserved']
     tu.buildNetworks.Settings.rateConstantScale = currentConfig['rateConstantScale']
 
     # Create initial random population
