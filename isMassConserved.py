@@ -9,7 +9,6 @@ for file in os.listdir(source_dir):
     os.chdir(source_dir)
     ant = clean.loadAntimonyText(file)
     full_ant = clean.loadAntimonyText_noLines(file)
-    massConserved = False
     for line in ant:
         if '->' in line and not line.startswith('#'):
             line = line.replace(' ', '')  # strip spaces
@@ -32,28 +31,29 @@ for file in os.listdir(source_dir):
                 # Separate products and reactant
                 products = reaction[1].split('+')
                 reactant = reaction[0]
-                if reactant != products[0] and reactant != products[1]:
-                    # mass is conserved, write to new dir
-                    os.chdir(true_dir)
-                else:
+                if reactant == products[0] or reactant == products[1]:
                     # mass is not conserved, write to dir
                     os.chdir(false_dir)
-                with open(file, "w") as f:
-                    f.write(full_ant)
-                    f.close()
-                # No need to go through remaining reactions once we've made a determination
-                break
+                    with open(file, "w") as f:
+                        f.write(full_ant)
+                        f.close()
+                    # If we find a reaction that violates mass conservation, we can move to the next model
+                    break
             elif rxnType == 'bi-uni':
                 reactants = reaction[0].split('+')
                 product = reaction[1]
-                if product != reactants[1] and product != reactants[1]:
-                    # mass is conserved, write to new dir
-                    os.chdir(true_dir)
-                else:
+                if product == reactants[0] or product == reactants[1]:
                     # mass is not conserved, write to dir
                     os.chdir(false_dir)
-                with open(file, "w") as f:
-                    f.write(full_ant)
-                    f.close()
-                # No need to go through remaining reactions once we've made a determination
-                break
+                    with open(file, "w") as f:
+                        f.write(full_ant)
+                        f.close()
+                    # If we find a reaction that violates mass conservation, we can move to the next model
+                    break
+        # If we've gone through every reaction without breaking out of the loop, then mass is conserved.
+        os.chdir(true_dir)
+        with open(file, "w") as f:
+            f.write(full_ant)
+            f.close()
+
+
