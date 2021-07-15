@@ -41,6 +41,8 @@ for file in os.listdir(source_dir):
                 with open(file, "w") as f:
                     f.write(full_ant)
                     f.close()
+                # No need to go through remaining reactions once we've made a determination
+                continue
             elif rxnType == 'bi-uni':
                 reactants = reaction[0].split('+')
                 product = reaction[1]
@@ -53,4 +55,5 @@ for file in os.listdir(source_dir):
                 with open(file, "w") as f:
                     f.write(full_ant)
                     f.close()
-
+                # No need to go through remaining reactions once we've made a determination
+                continue
