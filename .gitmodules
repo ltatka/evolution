@@ -1,3 +1,6 @@
 [submodule "sundials"]
 	path = sundials
 	url = https://github.com/LLNL/sundials.git
+[submodule "oscillatorDB"]
+	path = oscillatorDB
+	url = https://github.com/really-lilly/oscillatorDB.git
