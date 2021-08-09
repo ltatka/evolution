@@ -237,11 +237,12 @@ class AntimonyModel:
             for j in range (nFloats): # loop all nFloats
                 deviation[j] = 0;
                 for i in range (self.objectiveData.numberOfPoints - 1):
-                    deviation[j] = deviation[j] + (y[i, j] - self.objectiveData.outputData[i])**2
-                    if smallestDeviation > deviation[j]:
-                        smallestDeviation = deviation[j]
+                    # list integers must be indices or slices
+                    deviation[j] = deviation[j] + (y[i][j] - self.objectiveData.outputData[i])**2
+                if smallestDeviation > deviation[j]:
+                    smallestDeviation = deviation[j]
             # Size penalty:
-            smallestDeviation = smallestDeviation + 100 * len(self.nReactions)
+            smallestDeviation = smallestDeviation + 100 * len(self.reactions)
         except Exception as err:
              # Assign high fitness
              self.fitness = 1E17
@@ -275,3 +276,5 @@ class AntimonyModel:
 
 
 model = AntimonyModel(antStr)
+model.evalFitness()
+print(model.fitness)
