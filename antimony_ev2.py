@@ -109,10 +109,12 @@ class AntimonyModel:
     pKeepWorseModel = .3
 
     def __post_init__(self):
+        # After post_init, the AntimonyModel will have no duplicate
+        # reactions and no reactions where the product and reactant are the same.
         lines = self.ant.split('\n')
         newAnt = ''
         for line in lines:
-            if not line.startswith('#'):
+            if not line.startswith('#') and line != '':
                 if '->' in line:
                     self.reactions.append(line)
                 elif line.startswith('var'):
@@ -129,8 +131,12 @@ class AntimonyModel:
                 newAnt += line + '\n'
                 self.antLines.append(line)
         self.ant = newAnt
+        self.removeDuplicateRxns()
 
-
+    def removeDuplicateRxns(self):
+        self.makeRxnSet()
+        self.reactions, self.rateConstants = self.processRxnSet()
+        self.refactorModel()
 
     def makeRxnSet(self):
         rxnSet = ReactionSet()
@@ -162,16 +168,14 @@ class AntimonyModel:
                     else:
                         rxnSet.add(reaction)
         self.rxnSet = rxnSet
-        return rxnSet
 
 
-    def convertRxnSet(self):
+
+    def processRxnSet(self):
         self.makeRxnSet()
         reactionList = []
         rateConstantList= []
-
         for index, item in enumerate(self.rxnSet.rxnDict):
-
             reaction = ''
             rateLaw = f'; k{index}*'
             rateConstant = f'k{index} = '
@@ -210,7 +214,7 @@ class AntimonyModel:
         self.antLines = model
         newAntStr = ''
         for line in model:
-            newAntStr += line[0] + '\n'
+            newAntStr += line + '\n'
         self.ant = newAntStr
 
 
@@ -271,8 +275,3 @@ class AntimonyModel:
 
 
 model = AntimonyModel(antStr)
-model.deleteReaction()
-rxns, rate = model.convertRxnSet()
-
-
-print(rxns)
