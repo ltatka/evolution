@@ -25,15 +25,15 @@ if updateDatabase:
     print(f'processed {count} models')
 
 else:
-    PATH = '/home/hellsbells/Desktop/unprocessed3node'
+    PATH = '/home/hellsbells/Desktop/4-node-massconserved'
     save_dir = '/home/hellsbells/Desktop/3node-oscillate'
     rxn_processed_dir = '/home/hellsbells/Desktop/rxnProcessed'
     source_dir = save_dir
-    true_dir = '/home/hellsbells/Desktop/new3Node_massConserved'
-    false_dir = '/home/hellsbells/Desktop/new3Node_notMassConserved'
+    true_dir = '/home/hellsbells/Desktop/MassConserved'
+    false_dir = '/home/hellsbells/Desktop/massNotConserved'
     # Check if any of the models are damped or go to infinity:
-    #da.process_damped(PATH, save_dir)
-
+    da.process_damped(PATH, save_dir)
+    # Get rid of duplicate or null reactions:
     for model in os.listdir(save_dir):
         os.chdir(save_dir)
         # Open the model and read the antimony string:
@@ -43,8 +43,7 @@ else:
         # process the antimony string and eliminate any duplicate or null reactions:
         antModel = aModel.AntimonyModel(ant_str)
         antimony = antModel.ant
-        print(antModel.ant)
-        # Save the processed model
+        # Save the processed model:
         path = os.path.join(rxn_processed_dir, model)
         with open(path, 'w') as f:
             f.write(antimony)
