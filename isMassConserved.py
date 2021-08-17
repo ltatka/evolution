@@ -61,13 +61,13 @@ def isMassConserved(source_dir, true_dir, false_dir):
                     continue
             else: # if the line is not a reaction, move to the next line
                 continue
-            # If we've gone through every reaction without breaking out of the loop and changing the status of
-            # massConserved, then we can write the model out to the true_dir
-            if massConserved:
-                os.chdir(true_dir)
-                with open(file, "w") as f:
-                    f.write(full_ant)
-                    f.close()
+        # If we've gone through every reaction without breaking out of the loop and changing the status of
+        # massConserved, then we can write the model out to the true_dir
+        if massConserved:
+            os.chdir(true_dir)
+            with open(file, "w") as f:
+                f.write(full_ant)
+                f.close()
 
 
 
