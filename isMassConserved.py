@@ -4,8 +4,6 @@ import cleanUpMethods as clean
 
 def isMassConserved(source_dir, true_dir, false_dir):
     for file in os.listdir(source_dir):
-        if file == 'Model_3246966383208899508.ant':
-            print('here')
         os.chdir(source_dir)
         ant = clean.loadAntimonyText(file)
         full_ant = clean.loadAntimonyText_noLines(file)
@@ -14,8 +12,6 @@ def isMassConserved(source_dir, true_dir, false_dir):
         for line in ant:
             if '->' in line and not line.startswith('#'):
                 line = line.replace(' ', '')  # strip spaces
-                if line == 'S1->S1+S2;k1*S1' or line == 'S1->S2+S1;k1*S1':
-                    print('hi')
                 # separate products and reactants by splitting at ->
                 reaction = line.split('->')
                 reactants = reaction[0]
@@ -68,6 +64,5 @@ def isMassConserved(source_dir, true_dir, false_dir):
             with open(file, "w") as f:
                 f.write(full_ant)
                 f.close()
-
 
 
