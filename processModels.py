@@ -11,7 +11,6 @@ collection = mm.collection
 if updateDatabase:
     QUERY = {'num_nodes': 10, 'oscillator': True}
     models = mm.query_database(QUERY)
-    print(models[0]['model'])
     #print(f'Found {len(models)}')
     count = 0
     for model in models:
@@ -25,8 +24,8 @@ if updateDatabase:
     print(f'processed {count} models')
 
 else:
-    PATH = '/home/hellsbells/Desktop/4-node-massconserved'
-    save_dir = '/home/hellsbells/Desktop/3node-oscillate'
+    PATH = '/home/hellsbells/Desktop/unprocessedModels'
+    save_dir = '/home/hellsbells/Desktop/oscillators'
     rxn_processed_dir = '/home/hellsbells/Desktop/rxnProcessed'
     source_dir = save_dir
     true_dir = '/home/hellsbells/Desktop/MassConserved'
