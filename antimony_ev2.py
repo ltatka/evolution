@@ -7,6 +7,12 @@ import random
 from copy import deepcopy
 from math import trunc
 import operator
+from cleanUpMethods import isModelDampled
+
+def joinAntimonyLines(antLines):
+    if antLines[0] == '':
+        antLines = antLines[1:]
+    return '\n'.join(antLines)
 
 
 class Reaction():
@@ -53,11 +59,16 @@ class AntimonyModel(object, metaclass=PostInitCaller):
     rateConstantRange = .1
     pKeepWorseModel = 1
 
-    def __init__(self, ant_str, objectiveData=False):
-        self.ant = ant_str
+    def __init__(self, ant_str, removeDupes=True, objectiveData=False):
+        #TODO:
+        '''
+        processReactions: if False, will not go through and delete duplicates
+        objectiveData: if False, no objective data will be read ( won't be able to test fitness)
+        '''
         if objectiveData:
             self.objectiveData = readObjectiveFunction()
-
+        self.removeDupes = removeDupes
+        self.ant = ant_str
         self.antLines = []
         self.reactions = []
         self.speciesList = []
@@ -68,8 +79,6 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.nSpecies = 0
 
     def post_init(self):
-        # After post_init, the AntimonyModel will have no duplicate
-        # reactions and no reactions where the product and reactant are the same.
         lines = self.ant.split('\n')
         newAnt = ''
         for line in lines:
@@ -91,7 +100,8 @@ class AntimonyModel(object, metaclass=PostInitCaller):
                 self.antLines.append(line)
         del self.ant
         self.ant = newAnt
-        self.removeDuplicateRxns()
+        if self.removeDupes:
+            self.removeDuplicateRxns()
 
     def removeDuplicateRxns(self):
         # self.makeRxnSet()
@@ -169,10 +179,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
     def refactorModel(self):
         model = self.speciesList + self.reactions + self.rateConstants + self.initialConditions
         self.antLines = model
-        newAntStr = ''
-        for line in model:
-            newAntStr += line + '\n'
-        self.ant = newAntStr
+        self.ant = joinAntimonyLines(model)
 
     def simulate(self):
         numberOfPoints = self.objectiveData.numberOfPoints
@@ -254,6 +261,32 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         else:
             self.mutateRateConstant()
 
+    def deleteUnecessaryReactions(self):
+        lines = self.antLines
+        for index, line in enumerate(self.antLines):
+            if not line.startswith('#') and '->' in line:
+                # Save old reaction:
+                oldReaction = deepcopy(line)
+                # Comment out the reaction
+                self.antLines[index] = '#' + line
+                # Join the new antimony lines
+                newModel = joinAntimonyLines(self.antLines)
+
+                # If it the deleted reaction does not break the model, then delete it's rate constant
+                if not isModelDampled(newModel):
+                    # subtract length of reactions AND number of species because we're indexing entire model and
+                    # self.rateConstants is it's own block that comes after self.reactions and self.speciesList
+                    del self.rateConstants[index - len(self.reactions) - len(self.speciesList)]
+                    # subtract number of species for same reason as above
+                    del self.reactions[index - len(self.speciesList)]
+                    del self.antLines[index]
+                # uncomment the 'deleted' reaction if it is necessary
+                else:
+                    self.antLines[index] = line[1:]
+        # Store any changes
+        self.refactorModel()
+
+
 #
 # for i in range(genSize):
 #     population.append(deepcopy(model))
@@ -275,3 +308,36 @@ class AntimonyModel(object, metaclass=PostInitCaller):
 #     if i%10 == 0:
 #         print(f'GENERATION: {i}')
 #         print(population[0].fitness)
+
+lines = '''
+var S0
+var S1
+var S2
+var S3
+S3 + S2 -> S0; k0*S3*S2
+S1 -> S2+S1; k1*S1
+S0 -> S1; k2*S0
+S1 + S0 -> S0; k3*S1*S0
+S2 -> S3+S2; k4*S2
+S1 -> S1+S1; k5*S1
+S2 -> S1; k6*S2
+S3 + S2 -> S1 + S1; k7*S3*S2
+S1 + S3 -> S1; k8*S1*S3
+k0 = 24.659138313624783
+k1 = 13.57644554636069
+k2 = 10.07050761534018
+k3 = 11.6608784097331
+k4 = 13.777967970636334
+k5 = 52.01369925325314
+k6 = 31.366880064665363
+k7 = 40.780729025434816
+k8 = 7.242160825445598
+S0 = 1.0
+S1 = 5.0
+S2 = 9.0
+S3 = 3.0
+'''
+
+model = AntimonyModel(lines, removeDupes=False, objectiveData=False)
+
+model.deleteUnecessaryReactions()
