@@ -117,14 +117,12 @@ def check_infinity(result):
 
 # Return True if the model is damped
 def isModelDampled(antstr):
-    goesToInf = "unknown"
-    damped = None
     r = te.loada(antstr)
     try:
         m1 = r.simulate(0, 100, 1000)
         m2 = r.simulate(0, 1000, 5000)
     except Exception:
-       return True
+       return True, None
     _, col = np.shape(m1)
     goesToInf = check_infinity(m2)
     #Look at each species:

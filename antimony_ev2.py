@@ -268,12 +268,12 @@ class AntimonyModel(object, metaclass=PostInitCaller):
                 self.antLines[index] = '#' + line
                 # Join the new antimony lines
                 newModel = joinAntimonyLines(self.antLines)
+
                 damped, _ = isModelDampled(newModel)
                 # If it the deleted reaction does not break the model, then delete it's rate constant
                 if not damped:
-                    # subtract length of reactions AND number of species because we're indexing entire model and
-                    # self.rateConstants is it's own block that comes after self.reactions and self.speciesList
-                    del self.rateConstants[index - len(self.reactions) - len(self.speciesList)]
+                    # subtract length of speciesList because we're indexing entire model to adjust indices
+                    del self.rateConstants[index - len(self.speciesList)]
                     # subtract number of species for same reason as above
                     del self.reactions[index - len(self.speciesList)]
                     del self.antLines[index]
@@ -317,7 +317,6 @@ ext S6
 ext S7
 ext S8
 ext S9
-S0 + S5 -> S2; k0*S0*S5
 S0 + S5 -> S2; k0*S0*S5
 S5 + S3 -> S3; k1*S5*S3
 S8 + S1 -> S0; k2*S8*S1
