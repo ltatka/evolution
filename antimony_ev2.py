@@ -262,27 +262,24 @@ class AntimonyModel(object, metaclass=PostInitCaller):
             self.mutateRateConstant()
 
     def deleteUnecessaryReactions(self):
-        lines = self.antLines
         for index, line in enumerate(self.antLines):
             if not line.startswith('#') and '->' in line:
-                # Save old reaction:
-                oldReaction = deepcopy(line)
                 # Comment out the reaction
                 self.antLines[index] = '#' + line
                 # Join the new antimony lines
                 newModel = joinAntimonyLines(self.antLines)
-
+                damped, _ = isModelDampled(newModel)
                 # If it the deleted reaction does not break the model, then delete it's rate constant
-                if not isModelDampled(newModel):
+                if not damped:
                     # subtract length of reactions AND number of species because we're indexing entire model and
                     # self.rateConstants is it's own block that comes after self.reactions and self.speciesList
                     del self.rateConstants[index - len(self.reactions) - len(self.speciesList)]
                     # subtract number of species for same reason as above
                     del self.reactions[index - len(self.speciesList)]
                     del self.antLines[index]
-                # uncomment the 'deleted' reaction if it is necessary
+                # uncomment the 'deleted' reaction if it is necessary for oscillation
                 else:
-                    self.antLines[index] = line[1:]
+                    self.antLines[index] = self.antLines[index][1:]
         # Store any changes
         self.refactorModel()
 
@@ -314,30 +311,61 @@ var S0
 var S1
 var S2
 var S3
-S3 + S2 -> S0; k0*S3*S2
-S1 -> S2+S1; k1*S1
-S0 -> S1; k2*S0
-S1 + S0 -> S0; k3*S1*S0
-S2 -> S3+S2; k4*S2
-S1 -> S1+S1; k5*S1
-S2 -> S1; k6*S2
-S3 + S2 -> S1 + S1; k7*S3*S2
-S1 + S3 -> S1; k8*S1*S3
-k0 = 24.659138313624783
-k1 = 13.57644554636069
-k2 = 10.07050761534018
-k3 = 11.6608784097331
-k4 = 13.777967970636334
-k5 = 52.01369925325314
-k6 = 31.366880064665363
-k7 = 40.780729025434816
-k8 = 7.242160825445598
+var S4
+var S5
+ext S6
+ext S7
+ext S8
+ext S9
+S0 + S5 -> S2; k0*S0*S5
+S0 + S5 -> S2; k0*S0*S5
+S5 + S3 -> S3; k1*S5*S3
+S8 + S1 -> S0; k2*S8*S1
+S5 + S5 -> S4; k3*S5*S5
+S3 -> S2; k4*S3
+S9 + S6 -> S1; k5*S9*S6
+S4 + S5 -> S4; k6*S4*S5
+S0 -> S3; k7*S0
+S2 + S7 -> S5; k8*S2*S7
+S3 -> S2+S1; k9*S3
+S4 + S3 -> S5; k10*S4*S3
+S0 -> S3+S1; k11*S0
+S5 + S0 -> S3 + S2; k12*S5*S0
+S3 + S4 -> S5; k13*S3*S4
+S5 -> S3; k14*S5
+S5 -> S5; k15*S5
+k0 = 31.776577914011128
+k1 = 28.93189376090495
+k2 = 34.14674163481327
+k3 = 8.016119976696222
+k4 = 43.08159898790339
+k5 = 45.18697771178778
+k6 = 5.457040119751645
+k7 = 12.826847292282617
+k8 = 27.367525833763622
+k9 = 80.18139941218446
+k10 = 102.4821285436791
+k11 = 63.95124607780075
+k12 = 3.0938974149561655
+k13 = 93.54537634215069
+k14 = 0.059914800421738044
+k15 = 43.723318200629265
 S0 = 1.0
 S1 = 5.0
 S2 = 9.0
 S3 = 3.0
+S4 = 10.0
+S5 = 3.0
+S6 = 7.0
+S7 = 1.0
+S8 = 6.0
+S9 = 3.0
 '''
 
+
+
+isModelDampled(lines)
 model = AntimonyModel(lines, removeDupes=False, objectiveData=False)
+print(model.antLines)
 
 model.deleteUnecessaryReactions()
