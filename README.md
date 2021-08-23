@@ -1,10 +1,12 @@
 # Evolve Oscillating Models
 
 # Build sundials 
-## (I'm not sure if this works all the time...)
+## (works for linux)
 
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../../sundials-install-mac ..
-    cmake --build . --target install --config Release -j 12
+git submodule update --init --recursive
+from inside the evolution directory:
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sundials-install-linux sundials 
+cmake --build . --target install --config Release -j 12
 
 This produces the standard sundials install tree inside the "sundials" folder.
 
