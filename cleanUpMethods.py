@@ -100,10 +100,13 @@ def check_infinity(result):
     row, col = np.shape(result)
     # find max value at end
     max= 0
+    # maxCol = None
     for i in range(1, col):
         if result[row-1, i] > max:
             max = result[row-1, i]
             maxCol = i
+    # if not maxCol:
+    #     return True
     # Get the average of a few clusters of points on the line and see if
     # they are increasing
     pts1 = np.mean([result[round(row/3), maxCol], result[round(row/3)+2, maxCol], result[round(row/3)+4, maxCol]])

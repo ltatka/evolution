@@ -1,23 +1,32 @@
 import isMassConserved
 from oscillatorDB import mongoMethods as mm
 import antimony_ev2 as aModel
-import damped_analysis as da
-updateDatabase = False
 import os
-from shutil import move
+from cleanUpMethods import isModelDampled
+import damped_analysis as da
+
+updateDatabase = True
 collection = mm.collection
 
 
 if updateDatabase:
     QUERY = {'num_nodes': 10, 'oscillator': True}
     models = mm.query_database(QUERY)
-    #print(f'Found {len(models)}')
     count = 0
     for model in models:
+        print(model['ID'])
+        idQuery = {'ID': model['ID']}
         antModel = aModel.AntimonyModel(model['model'])
+        antModel.deleteUnecessaryReactions()
         nReactions = len(antModel.reactions)
-        update = {"$set" : {'model' : antModel.ant, "num_reactions" : nReactions}}
-        collection.update_one(QUERY, update)
+        damped, toInf = isModelDampled(antModel.ant)
+        mass = isMassConserved.isMassConserved_single(antModel.ant)
+        if not damped and not toInf:
+            update = {"$set": {
+                'model': antModel.ant,
+                "num_reactions": nReactions,
+                'mass_conserved': mass}}
+            collection.update_one(idQuery, update)
         count += 1
         if count%10 == 0:
             print(count)

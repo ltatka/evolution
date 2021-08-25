@@ -272,9 +272,9 @@ class AntimonyModel(object, metaclass=PostInitCaller):
                 # Join the new antimony lines
                 newModel = joinAntimonyLines(self.antLines)
 
-                damped, _ = isModelDampled(newModel)
+                damped, toInf = isModelDampled(newModel)
                 # If it the deleted reaction does not break the model, then delete it's rate constant
-                if not damped:
+                if not damped and not toInf:
                     # subtract length of speciesList because we're indexing entire model to adjust indices
                     del self.rateConstants[index - len(self.speciesList)]
                     # subtract number of species for same reason as above
@@ -286,31 +286,31 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         # Store any changes
         self.refactorModel()
 
-
-def evolveStage2(queryOrPath, ze=450, portionElite=0.1
-    if isinstance(queryOrPath, dict):
-        query = queryOrPath
-        pop
-    for i in range(genSize):
-        population.append(deepcopy(model))
-
-    for i in range(numGen):
-        newGen = deepcopy(population[:numElite])
-        # Tournament selection:
-        for j in range(genSize - numElite):
-            model1, model2 = random.choices(population, k=2)
-            if model1.fitness <= model2.fitness:
-                model1.mutateReactions()
-                newGen.append(model1)
-            else:
-                model2.mutateReactions
-                newGen.append(model2)
-        # Sort by fitness
-        newGen.sort(key=operator.attrgetter('fitness'))
-        population = newGen
-        if i%10 == 0:
-            print(f'GENERATION: {i}')
-            print(population[0].fitness)
+#
+# def evolveStage2(queryOrPath, ze=450, portionElite=0.1
+#     if isinstance(queryOrPath, dict):
+#         query = queryOrPath
+#         pop
+#     for i in range(genSize):
+#         population.append(deepcopy(model))
+#
+#     for i in range(numGen):
+#         newGen = deepcopy(population[:numElite])
+#         # Tournament selection:
+#         for j in range(genSize - numElite):
+#             model1, model2 = random.choices(population, k=2)
+#             if model1.fitness <= model2.fitness:
+#                 model1.mutateReactions()
+#                 newGen.append(model1)
+#             else:
+#                 model2.mutateReactions
+#                 newGen.append(model2)
+#         # Sort by fitness
+#         newGen.sort(key=operator.attrgetter('fitness'))
+#         population = newGen
+#         if i%10 == 0:
+#             print(f'GENERATION: {i}')
+#             print(population[0].fitness)
 #
 # lines = '''
 # var S0
