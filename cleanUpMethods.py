@@ -96,17 +96,19 @@ def isModelDampled_OLD(antstr):
     return dampled
 
 def check_infinity(result):
-    ''' Not robust enough for oscillating oscillators to infinty'''
     row, col = np.shape(result)
     # find max value at end
     max= 0
-    # maxCol = None
+    maxCol = None
     for i in range(1, col):
         if result[row-1, i] > max:
             max = result[row-1, i]
             maxCol = i
-    # if not maxCol:
-    #     return True
+    # If nothing ever exceeds max, then maxCol never is assigned. That means that concentrations either become
+    # negative, or they huddle around zero (ie -1.23279e-15). Either way, we want to throw out this model,
+    # so we'll return True even though it doesn't technically go to infinity.
+    if not maxCol:
+        return True
     # Get the average of a few clusters of points on the line and see if
     # they are increasing
     pts1 = np.mean([result[round(row/3), maxCol], result[round(row/3)+2, maxCol], result[round(row/3)+4, maxCol]])
