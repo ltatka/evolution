@@ -119,7 +119,7 @@ for model in models:
         no_autocatalysis.append(False)
 
 df = pd.DataFrame()
-df.set_index(all_ID)
+df['ID'] = all_ID
 df['Mass Conserved'] = all_massConserved
 df['No Autocatalysis'] = no_autocatalysis
 df['Portion Degradation'] = all_degradation_portion
@@ -129,5 +129,5 @@ df['Portion Uni-Bi'] = all_unibi_portion
 df['Portion Bi-Uni'] = all_biuni_portion
 df['Portion Bi-Bi'] = all_bibi_portion
 df['Total Reactions'] = all_nReactions
-
-df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeOscillator')
+df.set_index('ID')
+df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeOscillator.csv')
