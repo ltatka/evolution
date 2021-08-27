@@ -1,4 +1,8 @@
+import os
+
 import pandas as pd
+
+import isMassConserved
 from oscillatorDB import mongoMethods as mm
 '''
 For each reaction in the database:
@@ -82,10 +86,14 @@ def countReactions(astr):
     }
     return rxnDict
 
+fromDataBase = False
+directory =None
 
-query = {'num_nodes': 3, 'oscillator': True}
-models = mm.query_database(query)
-
+if fromDataBase:
+    query = {'num_nodes': 3, 'oscillator': True}
+    models = mm.query_database(query)
+else:
+    models = os.listdir(directory)
 all_nReactions = []
 
 all_uniuni_portion = []
@@ -103,9 +111,20 @@ all_massConserved = []
 
 
 for model in models:
-    all_ID.append(model['ID'])
-    all_massConserved.append(model['mass_conserved'])
-    reactions = countReactions(model['model'])
+    if fromDataBase:
+       ID = model['ID']
+       astr = model['model']
+       mass_conserved = model['mass_conserved']
+    else:
+        ID = model[:-4]
+        with open(model, "r") as f:
+            astr = f.read()
+            f.close()
+        mass_conserved = isMassConserved.isMassConserved_single(astr)
+
+    all_ID.append(ID)
+    all_massConserved.append(mass_conserved)
+    reactions = countReactions(astr)
     all_nReactions.append(reactions['total'])
     all_uniuni_portion.append(reactions['uni-uni'])
     all_unibi_portion.append(reactions['uni-bi'])
