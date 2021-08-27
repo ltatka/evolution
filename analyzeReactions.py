@@ -63,7 +63,8 @@ def countReactions(astr):
                 reactants = reactants.split('+')
                 if products in reactants:
                     degrade += 1
-            else:  # bi-bi
+            #elif rxnType == 'bi-bi':  # bi-bi
+            else:
                 bi_bi += 1
                 # We should have already checked for null reactions, where reactant and product are the same,
                 # so we're not going to check for that here.
@@ -87,12 +88,13 @@ def countReactions(astr):
     return rxnDict
 
 fromDataBase = False
-directory =None
+directory = '/home/hellsbells/Desktop/Random3Node'
 
 if fromDataBase:
     query = {'num_nodes': 3, 'oscillator': True}
     models = mm.query_database(query)
 else:
+    os.chdir(directory)
     models = os.listdir(directory)
 all_nReactions = []
 
@@ -149,4 +151,4 @@ df['Portion Bi-Uni'] = all_biuni_portion
 df['Portion Bi-Bi'] = all_bibi_portion
 df['Total Reactions'] = all_nReactions
 df.set_index('ID')
-df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeOscillator.csv')
+df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeRandom.csv')

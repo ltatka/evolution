@@ -6,7 +6,7 @@ Created on Fri Apr 30 15:55:44 2021
 """
 
 from commonTypes import TModel_
-import teUtils as tu
+from teUtils import teUtils as tu
 from uModel import TModel
 from uModel import TReaction
 
@@ -26,24 +26,24 @@ def convertToAntimony (model):
         
     for i in range (nReactions):
         reaction = reactions[i+1]
-        if reaction[0] == tu.buildNetworks.TReactionType.UNIUNI:
+        if reaction[0] == tu.buildNetworks.TReactionType.UniUni:
            S1 = 'S' + str (reaction[1][0])
            S2 = 'S' + str (reaction[2][0])
            astr += S1 + ' -> ' + S2
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BIUNI:
+        if reaction[0] == tu.buildNetworks.TReactionType.BiUni:
            S1 = 'S' + str (reaction[1][0])
            S2 = 'S' + str (reaction[1][1])
            S3 = 'S' + str (reaction[2][0])
            astr += S1 + ' + ' + S2 + ' -> ' + S3
            astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.UNIBI:
+        if reaction[0] == tu.buildNetworks.TReactionType.UniBi:
            S1 = 'S' + str (reaction[1][0])
            S2 = 'S' + str (reaction[2][0])
            S3 = 'S' + str (reaction[2][1])
            astr += S1 + ' -> ' + S2 + '+' + S3
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BIBI:
+        if reaction[0] == tu.buildNetworks.TReactionType.BiBi:
            S1 = 'S' + str (reaction[1][0])
            S2 = 'S' + str (reaction[1][1])
            S3 = 'S' + str (reaction[2][0])
@@ -74,24 +74,24 @@ def convertToAntimony2 (model):
         
     for i in range (nReactions):
         reaction = reactions[i]
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UNIUNI:
+        if reaction.reactionType == tu.buildNetworks.TReactionType.UniUni:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.product1)
            astr += S1 + ' -> ' + S2
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BIUNI:
+        if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.reactant2)
            S3 = 'S' + str (reaction.product1)
            astr += S1 + ' + ' + S2 + ' -> ' + S3
            astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UNIBI:
+        if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.product1)
            S3 = 'S' + str (reaction.product2)
            astr += S1 + ' -> ' + S2 + '+' + S3
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BIBI:
+        if reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.reactant2)
            S3 = 'S' + str (reaction.product1)
