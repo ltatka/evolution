@@ -1,22 +1,10 @@
 import os
-
+import numpy as np
 import pandas as pd
 
 import isMassConserved
 from oscillatorDB import mongoMethods as mm
-'''
-For each reaction in the database:
-1. Count reactions
-2. Make dictionary of reaction types
-3. Upload reaction type dictionary 
-    no autocatalyis: T/F
 
-Let's make the pandas spread sheet average portions
-
-4. append average portions to list
-
-
-'''
 
 def countReactions(astr):
     # Returns dictionary of reaction counts
@@ -87,6 +75,7 @@ def countReactions(astr):
     }
     return rxnDict
 
+
 fromDataBase = False
 directory = '/home/hellsbells/Desktop/Random3Node'
 
@@ -152,3 +141,4 @@ df['Portion Bi-Bi'] = all_bibi_portion
 df['Total Reactions'] = all_nReactions
 df.set_index('ID')
 df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeRandom.csv')
+
