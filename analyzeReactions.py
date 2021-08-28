@@ -51,15 +51,15 @@ def countReactions(astr):
                 reactants = reactants.split('+')
                 if products in reactants:
                     degrade += 1
-            #elif rxnType == 'bi-bi':  # bi-bi
-            else:
+            elif rxnType == 'bi-bi':  # bi-bi
                 bi_bi += 1
                 # We should have already checked for null reactions, where reactant and product are the same,
                 # so we're not going to check for that here.
                 # Separate products and reactants
                 reactants = reactants.split('+')
                 products = products.split('+')
-                if reactants[0] in products or reactants[1] in products:
+                if (reactants[0] == products[0] and reactants[0] == products[1]) or \
+                        (reactants[1] == products[0] and reactants[1] == products[1]):
                     autocatalysis += 1
         else:  # if the line is not a reaction, move to the next line
             continue
@@ -142,3 +142,4 @@ df['Total Reactions'] = all_nReactions
 df.set_index('ID')
 df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeRandom.csv')
 
+print(np.mean(all_uniuni_portion), np.mean(all_unibi_portion), np.mean(all_biuni_portion), np.mean(all_bibi_portion))

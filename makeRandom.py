@@ -50,14 +50,10 @@ nAddReaction = 0
 nParameterChanges = 0
 timetaken = 0
 
-tu.buildNetworks.Settings.ReactionProbabilities.UniUi = 0.05
-tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.0
-tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.0
-tu.buildNetworks.Settings.ReactionProbabilities.BiBi = 0.95
-
-print(tu.buildNetworks.Settings.ReactionProbabilities.BiBi)
-
-
+tu.buildNetworks.Settings.ReactionProbabilities.UniUni = 0.1
+tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
+tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
+tu.buildNetworks.Settings.ReactionProbabilities.BiBi = 0.1
 
 
 
@@ -112,7 +108,7 @@ if __name__ == "__main__":
     defaultConfig = {"maxGenerations": 1,
                      "massConserved": False, # Not sure that this is actually working
                      "toZip": False,
-                     "sizeOfPopulation": 1000,
+                     "sizeOfPopulation": 10000,
                      "numSpecies": 5,
                      "numReactions": 15,
                      "rateConstantScale": 50,
@@ -129,27 +125,6 @@ if __name__ == "__main__":
     seed = -1
     maxGenerations = -1
     newConfigFile = ''
-    # argv = sys.argv[1:]
-    # options, args = getopt.getopt(argv, 's:g:c:hv', [])
-    # for opt, arg in options:
-    #     if opt in ('-s', ''):
-    #         seed = int(arg)
-    #     if opt in ('-g', ''):
-    #         maxGenerations = int(arg)
-    #     if opt in ('-c', ''):
-    #         newConfigFile = arg
-    #         if not newConfigFile.endswith('.json'):
-    #             newConfigFile += '.json'
-    #         print(newConfigFile + ' in use')
-    #     if opt in ('-v', ''):
-    #         print("version 1.0")
-    #         sys.exit()
-    #     if opt in ('-h', ''):
-    #         print("Help:")
-    #         print("Set the seed:  -s 54545353")
-    #         print("Set the number of generations to use:  -g 1000")
-    #         sys.exit()
-
 
     if not os.path.exists('defaultConfig.json'):
         print("not os")
@@ -160,7 +135,7 @@ if __name__ == "__main__":
     currentConfig = defaultConfig
 
 
- 
+
     if seed == -1:
         if defaultConfig['seed'] == -1:
             seed = random.randrange(sys.maxsize)
