@@ -1,6 +1,6 @@
 import sys
-import mongoMethods as mm
-import cleanUpMethods as clean
+from oscillatorDB import mongoMethods as mm
+import antUtils
 
 num_nodes = int(sys.argv[-2])
 oscillator = bool(sys.argv[-1])
@@ -10,7 +10,7 @@ total = len(sys.argv[1:-2])
 count = 0
 for file in sys.argv[1:-2]:
     try:
-        ant = clean.extractAnt(file)
+        ant = antUtils.extractAnt(file)
         num_reactions = mm.get_nReactions(ant)
         filename = file.split('/')[-1]
         ID = mm.extract_id(filename)
