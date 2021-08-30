@@ -63,7 +63,10 @@ class Evolver(object, metaclass=PostInitCaller):
         if self.seed == -1:
             self.seed = random.randrange(sys.maxsize)
         random.seed(self.seed)
-        tu.buildNetworks.Settings.allowMassViolatingReactions = not bool(self.currentConfig['massConserved'])
+        if self.currentConfig["massConserved"] == "True":
+            tu.buildNetworks.Settings.allowMassViolatingReactions = False
+        else:
+            tu.buildNetworks.Settings.allowMassViolatingReactions = True
         tu.buildNetworks.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
 
     #_________________________________________________________________________________
@@ -296,10 +299,10 @@ class Evolver(object, metaclass=PostInitCaller):
             if population[0].fitness <= self.currentConfig['threshold']:
                 saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
                 self.saveRun(saveFileName, population)
-                print("SUCCESS!")
+                print("\nSUCCESS!")
                 break
         if population[0].fitness > self.currentConfig['threshold']:
-            print("FAIL")
+            print("\nFAIL")
             saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
             self.saveRun(saveFileName, population)
         self.printSummary(population)
@@ -318,7 +321,7 @@ class Evolver(object, metaclass=PostInitCaller):
             print('.', end='', flush=True)
 
     def savePopulation(self, population):
-        if not bool(self.currentConfig["toZip"]):
+        if self.currentConfig["toZip"] == "False":
             return None
         p = self.clonePopulation(population)
         self.tracker['savedPopulations'].append(p)
