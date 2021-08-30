@@ -239,8 +239,3 @@ while 1:
     if user_input == 'count':
         print ("Number of models = ", len (zipFileList))
        
-
-    
-       
-       
-    

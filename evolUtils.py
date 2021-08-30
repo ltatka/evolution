@@ -38,7 +38,7 @@ class PostInitCaller(type):
         obj.post_init()
         return obj
 
-class Evolver():
+class Evolver(object, metaclass=PostInitCaller):
 
     tu.buildNetworks.Settings.ReactionProbabilities.UniUni = 0.1
     tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
@@ -56,15 +56,27 @@ class Evolver():
         self.makeTracker()
 
     def post_init(self):
+        self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
+        self.remainder = self.currentConfig["sizeOfPopulation"] - \
+                         math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
         self.seed = self.currentConfig['seed']
         if self.seed == -1:
             self.seed = random.randrange(sys.maxsize)
         random.seed(self.seed)
-        if self.currentConfig['massConserved'] == "True":
-            tu.buildNetworks.Settings.allowMassViolatingReactions = True
-        else:
-            tu.buildNetworks.Settings.allowMassViolatingReactions = False
+        tu.buildNetworks.Settings.allowMassViolatingReactions = not bool(self.currentConfig['massConserved'])
         tu.buildNetworks.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
+
+    #_________________________________________________________________________________
+    #    METHODS TO SET UP EVOLUTION PARAMETERS
+    #_________________________________________________________________________________
+
+    def writeOutConfigForModel(self, f):
+        f.write("# " + json.dumps(self.currentConfig))
+        f.write('\n')
+
+    def printCurrentConfig(self):
+        for item in self.currentConfig:
+            print(f"{item}: {self.currentConfig[item]}")
 
     def makeTracker(self):
         self.tracker = {"fitnessArray": [],
@@ -75,10 +87,6 @@ class Evolver():
                         "nParameterChanges": 0,
                         "timetaken": 0}
 
-    def writeOutConfigForModel(self, f):
-        f.write("# " + json.dumps(self.currentConfig))
-        f.write('\n')
-
     def changeReactionProbabilites(self, uniuni, unibi, biuni, bibi):
         if uniuni+unibi+biuni+bibi != 1.0:
             raise ValueError('Probabilities do not add up to 1!')
@@ -86,6 +94,10 @@ class Evolver():
         tu.buildNetworks.Settings.ReactionProbabilities.UniBi = unibi
         tu.buildNetworks.Settings.ReactionProbabilities.BiUni = biuni
         tu.buildNetworks.Settings.ReactionProbabilities.BiBi = bibi
+
+    #_________________________________________________________________________________
+    #    METHODS FOR INDIVIDUAL EVOLUTION
+    #_________________________________________________________________________________
 
     def addReaction(self, model):
         self.tracker["nAddReaction"] += 1
@@ -163,7 +175,6 @@ class Evolver():
         return ([model[0], model[1], find, model[4], False, 0])
 
 
-
     # Either delete or add a new reaction, 50/50 chance
     def mutateReaction(self, model):
         if random.random() > 0.5:
@@ -186,132 +197,148 @@ class Evolver():
             # if keyboard.is_pressed("q"):
             #   print ("keyboard break")
             #   sys.exit()
-            evalFitness.computeFitnessOfIndividual(index, model, self.objectiveData)
+            self.fitnessEvaluator.computeFitnessOfIndividual(index, model, self.objectiveData)
 
-    class EvolutionManager():
+    # _________________________________________________________________________________
+    #    METHODS FOR MANAGING POPULATIONS
+    # _________________________________________________________________________________
 
-        def __init__(self, configuration=None):
-            self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
-            self.remainder = self.currentConfig["sizeOfPopulation"] - \
-                             math.trunc(self.currentConfig['percentageCloned']* self.currentConfig['sizeOfPopulation'])
-        def makePopulation(self):
-            population = []
-            for i in range(self.currentConfig['sizeOfPopulation']):
-                amodel = self.makeModel(self.currentConfig['numSpecies'], self.currentConfig['numReactions'])
-                population.append(amodel)
-            return population
 
-        def makeModel(self, nSpecies, nReactions):
-            model = tu.buildNetworks.getRandomNetworkDataStructure(nSpecies, nReactions)
-            nFloats = len(model[0])
-            nBoundary = len(model[1])
-            model.insert(0, nFloats)
-            model.insert(1, nBoundary)
-            # Append boundary to float list
-            model[2] = list(np.append(model[2], model[3]))
-            model.insert(4, self.currentConfig["initialConditions"][:nFloats + nBoundary])
-            model.append(0.0)  # Append fitness variable
-            # model = refactor(model)
-            amodel = uModel.TModel()
-            amodel.numFloats = nFloats
-            amodel.numBoundary = nBoundary
-            amodel.cvode = TCvode(uLoadCvode.CV_BDF)
-            for r in model[TModel_.reactionList][1:]:
-                reaction = uModel.TReaction()
-                reaction.reactionType = r[0]
+    def makePopulation(self):
+        population = []
+        for i in range(self.currentConfig['sizeOfPopulation']):
+            amodel = self.makeModel(self.currentConfig['numSpecies'], self.currentConfig['numReactions'])
+            population.append(amodel)
+        return population
 
-                reaction.reactant1 = r[1][0]
-                if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
-                    reaction.reactant2 = r[1][1]
+    def makeModel(self, nSpecies, nReactions):
+        model = tu.buildNetworks.getRandomNetworkDataStructure(nSpecies, nReactions)
+        nFloats = len(model[0])
+        nBoundary = len(model[1])
+        model.insert(0, nFloats)
+        model.insert(1, nBoundary)
+        # Append boundary to float list
+        model[2] = list(np.append(model[2], model[3]))
+        model.insert(4, self.currentConfig["initialConditions"][:nFloats + nBoundary])
+        model.append(0.0)  # Append fitness variable
+        # model = refactor(model)
+        amodel = uModel.TModel()
+        amodel.numFloats = nFloats
+        amodel.numBoundary = nBoundary
+        amodel.cvode = TCvode(uLoadCvode.CV_BDF)
+        for r in model[TModel_.reactionList][1:]:
+            reaction = uModel.TReaction()
+            reaction.reactionType = r[0]
 
-                reaction.product1 = r[2][0]
-                if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
-                    reaction.product2 = r[2][1]
+            reaction.reactant1 = r[1][0]
+            if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+                reaction.reactant2 = r[1][1]
 
-                reaction.rateConstant = r[3]
-                amodel.reactions.append(reaction)
-                amodel.initialConditions = np.zeros(model[TModel_.nFloats] + model[TModel_.nBoundary])
-                for index, ic in enumerate(model[TModel_.initialCond]):
-                    amodel.initialConditions[index] = ic
-                amodel.fitness = 0
-            return amodel
+            reaction.product1 = r[2][0]
+            if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+                reaction.product2 = r[2][1]
 
-        def getNextGen(self, population):
-            self.computeFitness(population)
-            # Sort the population according to fitness
-            population.sort(key=lambda x: x.fitness)
-            newPopulation = []
-            self.tracker["fitnessArray"].append(population[0].fitness)
-            newPopulation.append(uModel.clone(population[0]))
-            for i in range(self.topElite - 1):
-                newPopulation.append(uModel.clone(population[i]))
-            selections = self.tournamentSelect(population)
-            newPopulation = newPopulation + selections
-            return newPopulation
+            reaction.rateConstant = r[3]
+            amodel.reactions.append(reaction)
+            amodel.initialConditions = np.zeros(model[TModel_.nFloats] + model[TModel_.nBoundary])
+            for index, ic in enumerate(model[TModel_.initialCond]):
+                amodel.initialConditions[index] = ic
+            amodel.fitness = 0
+        return amodel
 
-        def tournamentSelect(self, population):
-            selectedPopulation = []
-            for i in range(self.remainder):
-                # pick two models at random, then pick the best and mutate it
-                r1 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
-                r2 = random.randint(1, self.currentConfig["sizeOfPopulation"]  - 1)
+    def getNextGen(self, population):
+        self.computeFitness(population)
+        # Sort the population according to fitness
+        population.sort(key=lambda x: x.fitness)
+        newPopulation = []
+        self.tracker["fitnessArray"].append(population[0].fitness)
+        newPopulation.append(uModel.clone(population[0]))
+        for i in range(self.topElite - 1):
+            newPopulation.append(uModel.clone(population[i]))
+        selections = self.tournamentSelect(population)
+        newPopulation = newPopulation + selections
+        return newPopulation
 
-                if population[r1].fitness < population[r2].fitness:
-                    if random.random() > self.currentConfig['probabilityMutateRateConstant']:
-                        self.mutateReaction(population[r1])
-                    else:
-                        n, change = self.mutateRateConstant(population[r1])
-                        amodel = uModel.clone(population[r1])
-                        amodel.reactions[n].rateConstant += change
-                    selectedPopulation.append(amodel)
-                else:
-                    if random.random() > self.currentConfig['probabilityMutateRateConstant']:
-                        self.mutateReaction(population[r2])
-                    else:
-                        n, change = self.mutateRateConstant(population[r2])
-                        amodel = uModel.clone(population[r2])
-                        amodel.reactions[n].rateConstant += change;
-                    selectedPopulation.append(amodel)
-            return selectedPopulation
+    def tournamentSelect(self, population):
+        selectedPopulation = []
+        for i in range(self.remainder):
+            # pick two models at random, then pick the best and mutate it
+            r1 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
+            r2 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
 
-        def printProgress(self, genNum, population):
-            if genNum % self.currentConfig['frequencyOfOutput'] == 0:
-                print(flush=True)
-                print("gen[" + str(genNum) + "] fitness=",
-                      "{:.4f}".format(population[0].fitness),
-                      str(len(population[0].reactions)), end='', flush=True)
+            if population[r1].fitness < population[r2].fitness:
+                model = uModel.clone(population[r1])
             else:
-                print('.', end='', flush=True)
+                model = uModel.clone(population[r2])
+            if random.random() > self.currentConfig['probabilityMutateRateConstant']:
+                self.mutateReaction(model)
+            else:
+                n, change = self.mutateRateConstant(model)
+                model.reactions[n].rateConstant += change
+            selectedPopulation.append(model)
+        return selectedPopulation
 
-        def clonePopulation(self, population):
-            p = []
-            for pop in population:
-                p.append(uModel.clone(pop))
-            return p
+    def clonePopulation(self, population):
+        p = []
+        for pop in population:
+            p.append(uModel.clone(pop))
+        return p
 
-        def savePopulation(self, gen, population):
-            p = self.clonePopulation(population)
-            self.tracker['savedPopulations'].append(p)
 
-        def evolve(self):
-            self.makeTracker()
-            population = self.makePopulation()
-            for i in range(self.currentConfig['maxGenerations']):
-                population = self.getNextGen(population)
-                if population[0].fitness < self.currentConfig['threshold']:
-                    break
-                self.printProgress(i, population)
-            return population[0]
+    def evolve(self):
+        self.printCurrentConfig()
+        self.makeTracker()
+        population = self.makePopulation()
+        for i in range(self.currentConfig['maxGenerations']):
+            population = self.getNextGen(population)
+            self.savePopulation(population)
+            self.printProgress(i, population)
+            if population[0].fitness <= self.currentConfig['threshold']:
+                saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
+                self.saveRun(saveFileName, population)
+                print("SUCCESS!")
+                break
+        if population[0].fitness > self.currentConfig['threshold']:
+            print("FAIL")
+            saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
+            self.saveRun(saveFileName, population)
+        self.printSummary(population)
 
-        def saveRun(self, saveFileName, population):
-            if self.currentConfig["toZip"] == "False":
-                return None
+    # _________________________________________________________________________________
+    #    METHODS FOR PRINTING AND SAVING PROGRESS
+    # _________________________________________________________________________________
+
+    def printProgress(self, genNum, population):
+        if genNum % self.currentConfig['frequencyOfOutput'] == 0:
+            print(flush=True)
+            print("gen[" + str(genNum) + "] fitness=",
+                  "{:.4f}".format(population[0].fitness),
+                  str(len(population[0].reactions)), end='', flush=True)
+        else:
+            print('.', end='', flush=True)
+
+    def savePopulation(self, population):
+        if not bool(self.currentConfig["toZip"]):
+            return None
+        p = self.clonePopulation(population)
+        self.tracker['savedPopulations'].append(p)
+
+
+    def saveRun(self, saveFileName, population):
+        if not bool(self.currentConfig["toZip"]):
+            saveFileName = saveFileName + ".ant"
+            astr = convertToAntimony2(population[0])
+            with open(saveFileName, "w") as f:
+                f.write(astr)
+                f.close()
+        else:
+            saveFileName = saveFileName + ".zip"
             zf = zipfile.ZipFile(saveFileName, mode="w", compression=zipfile.ZIP_DEFLATED)
             try:
                 json_string = json.dumps(self.tracker["fitnessArray"])
                 zf.writestr("fitnessList.txt", json_string)
 
-                astr = evolUtils.convertToAntimony2(population[0]);
+                astr = convertToAntimony2(population[0])
                 zf.writestr("best_antimony.ant", astr)
                 zf.writestr("seed_" + str(self.seed) + ".txt", str(self.seed))
 
@@ -321,12 +348,13 @@ class Evolver():
                 now = datetime.now()
                 summaryStr = 'Date:' + today.strftime("%b-%d-%Y") + '\n'
                 summaryStr += 'Time:' + now.strftime("%H:%M:%S") + '\n'
+                self.tracker["timeTaken"] = time.time() - self.tracker["startTime"]
                 summaryStr += 'Time taken in seconds:' + str(math.trunc(self.tracker["timetaken"] * 100) / 100) + "\n"
                 summaryStr += 'Time taken (hrs:min:sec):' + str(
                     time.strftime("%H:%M:%S", time.gmtime(self.tracker["timetaken"]))) + "\n"
                 summaryStr += '#Seed=' + str(self.seed) + '\n'
                 summaryStr += '#Final_number_of_generations=' + str(len(self.tracker["savedPopulations"])) + '\n'
-                summaryStr += '#Size_of_population=' + str(self.currentConfig["sizeOfPopulation") + '\n'
+                summaryStr += '#Size_of_population=' + str(self.currentConfig["sizeOfPopulation"]) + '\n'
                 summaryStr += '#Number_of_added_reactions=' + str(self.tracker["nAddReaction"]) + '\n'
                 summaryStr += '#Number_of_deleted_reactions=' + str(self.tracker["nDeleteReactions"]) + '\n'
                 summaryStr += '#Number_of_parameter_changes=' + str(self.tracker["nParameterChanges"]) + '\n'
@@ -342,55 +370,67 @@ class Evolver():
             finally:
                 zf.close()
 
-    class Plotter():
+    def printSummary(self, population):
+        print("Final fitness = ", population[0].fitness)
+        self.tracker["timeTaken"] = time.time() - self.tracker["startTime"]
+        print("Time taken in seconds = ", math.trunc(self.tracker["timeTaken"] * 100) / 100)
+        print("Time taken (hrs:min:sec): ", time.strftime("%H:%M:%S", time.gmtime(self.tracker["timeTaken"])))
+        print("Seed = ", self.seed)
+        print('Number of added reactions = ', self.tracker["nAddReaction"])
+        print('Number of deleted reactions = ', self.tracker["nDeleteReactions"])
+        print('Number of parameter changes = ', self.tracker["nParameterChanges"])
 
-        def plotFitnessPopulationHist(self, population):
-            data = []
-            for model in population:
-                data.append(model.fitness)
-            plt.hist(data)
-            plt.show()
+    # _________________________________________________________________________________
+    #    METHODS FOR PLOTTING RESULTS
+    # _________________________________________________________________________________
 
-        def plotFitnessOfIndividuals(self, population):
-            data = []
-            for model in population:
-                data.append(model.fitness)
-            plt.plot(data)
-            plt.show()
+    def plotFitnessPopulationHist(self, population):
+        data = []
+        for model in population:
+            data.append(model.fitness)
+        plt.hist(data)
+        plt.show()
 
-        def plotPopulationPlots(self, population):
-            n = math.trunc(math.sqrt(len(population)))
-            fig, axs = plt.subplots(n, n, figsize=(13, 11))
-            count = 0
-            for i in range(n):
-                for j in range(n):
-                    t, y = self.fitnessEvaluator.runSimulation(population[count], 1.25, 100)
-                    axs[i, j].plot(t, y)
-                    count += 1
+    def plotFitnessOfIndividuals(self, population):
+        data = []
+        for model in population:
+            data.append(model.fitness)
+        plt.plot(data)
+        plt.show()
 
-        def plotFitnessArray(self):
-            plt.plot(self.tracker["fitnessArray"])
-            plt.show()
+    def plotPopulationPlots(self, population):
+        n = math.trunc(math.sqrt(len(population)))
+        fig, axs = plt.subplots(n, n, figsize=(13, 11))
+        count = 0
+        for i in range(n):
+            for j in range(n):
+                t, y = self.fitnessEvaluator.runSimulation(population[count], 1.25, 100)
+                axs[i, j].plot(t, y)
+                count += 1
 
-        @staticmethod
-        def plotFitnesssFromFile(fileName):
-            data = np.loadtxt(fileName, delimiter=',')
-            plt.plot(data[:, 0], data[:, 1])
-            plt.show()
+    def plotFitnessArray(self):
+        plt.plot(self.tracker["fitnessArray"])
+        plt.show()
 
-        @staticmethod
-        def displayFitness(population):
-            for p in population:
-                print(p.fitness)
+    @staticmethod
+    def plotFitnesssFromFile(fileName):
+        data = np.loadtxt(fileName, delimiter=',')
+        plt.plot(data[:, 0], data[:, 1])
+        plt.show()
 
-        @staticmethod
-        def printModel(model):
-            print("Model details:")
-            print('Num floats:', model.numFloats, 'num boundary:', model.numBoundary, 'Num reactions:',
-                  len(model.reactions),
-                  'fitness:', math.trunc(model.fitness * 100) / 100);
-            for r in model.reactions:
-                print(r.reactionType, r.reactants, r.products, r.rateConstant)
+    @staticmethod
+    def displayFitness(population):
+        for p in population:
+            print(p.fitness)
+
+    @staticmethod
+    def printModel(model):
+        print("Model details:")
+        print('Num floats:', model.numFloats, 'num boundary:', model.numBoundary, 'Num reactions:',
+              len(model.reactions),
+              'fitness:', math.trunc(model.fitness * 100) / 100);
+        for r in model.reactions:
+            print(r.reactionType, r.reactants, r.products, r.rateConstant)
 
 
 
