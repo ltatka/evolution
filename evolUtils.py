@@ -299,10 +299,10 @@ class Evolver(object, metaclass=PostInitCaller):
             if population[0].fitness <= self.currentConfig['threshold']:
                 saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
                 self.saveRun(saveFileName, population)
-                print("\nSUCCESS!")
+                print("\n\nSUCCESS!\n")
                 break
         if population[0].fitness > self.currentConfig['threshold']:
-            print("\nFAIL")
+            print("\n\nFAIL\n")
             saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
             self.saveRun(saveFileName, population)
         self.printSummary(population)
@@ -316,19 +316,18 @@ class Evolver(object, metaclass=PostInitCaller):
             print(flush=True)
             print("gen[" + str(genNum) + "] fitness=",
                   "{:.4f}".format(population[0].fitness),
-                  str(len(population[0].reactions)), end='', flush=True)
+                  end='', flush=True)
         else:
             print('.', end='', flush=True)
 
     def savePopulation(self, population):
-        if self.currentConfig["toZip"] == "False":
-            return None
-        p = self.clonePopulation(population)
-        self.tracker['savedPopulations'].append(p)
+        if self.currentConfig["toZip"] == "True":
+            p = self.clonePopulation(population)
+            self.tracker['savedPopulations'].append(p)
 
 
     def saveRun(self, saveFileName, population):
-        if not bool(self.currentConfig["toZip"]):
+        if self.currentConfig["toZip"] == "False":
             saveFileName = saveFileName + ".ant"
             astr = convertToAntimony2(population[0])
             with open(saveFileName, "w") as f:
