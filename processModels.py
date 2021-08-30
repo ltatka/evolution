@@ -2,7 +2,6 @@ import isMassConserved
 from oscillatorDB import mongoMethods as mm
 import antimony_ev2 as aModel
 import os
-from cleanUpMethods import isModelDampled
 import damped_analysis as da
 
 updateDatabase = True
@@ -19,7 +18,7 @@ if updateDatabase:
         antModel = aModel.AntimonyModel(model['model'])
         antModel.deleteUnecessaryReactions()
         nReactions = len(antModel.reactions)
-        damped, toInf = isModelDampled(antModel.ant)
+        damped, toInf = da.isModelDampled(antModel.ant)
         mass = isMassConserved.isMassConserved_single(antModel.ant)
         if not damped and not toInf:
             update = {"$set": {

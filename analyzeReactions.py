@@ -6,6 +6,9 @@ import isMassConserved
 from oscillatorDB import mongoMethods as mm
 
 
+fromDataBase = True
+directory = '/home/hellsbells/Desktop/Random3Node'
+
 def countReactions(astr):
     # Returns dictionary of reaction counts
     uni_uni = 0
@@ -76,11 +79,10 @@ def countReactions(astr):
     return rxnDict
 
 
-fromDataBase = False
-directory = '/home/hellsbells/Desktop/Random3Node'
+
 
 if fromDataBase:
-    query = {'num_nodes': 3, 'oscillator': True}
+    query = {'num_nodes': 10, 'oscillator': True}
     models = mm.query_database(query)
 else:
     os.chdir(directory)
@@ -140,6 +142,6 @@ df['Portion Bi-Uni'] = all_biuni_portion
 df['Portion Bi-Bi'] = all_bibi_portion
 df['Total Reactions'] = all_nReactions
 df.set_index('ID')
-df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/3NodeRandom.csv')
+df.to_csv(path_or_buf='/home/hellsbells/Desktop/ReactionCounts/10NodeOscillator.csv')
 
 print(np.mean(all_uniuni_portion), np.mean(all_unibi_portion), np.mean(all_biuni_portion), np.mean(all_bibi_portion))

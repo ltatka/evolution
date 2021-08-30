@@ -56,7 +56,6 @@ tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
 tu.buildNetworks.Settings.ReactionProbabilities.BiBi = 0.1
 
 
-
 initialConditions = [1, 5, 9, 3, 10, 3, 7, 1, 6, 3, 10, 11, 4, 6, 2, 7, 1, 9, 5, 7, 2, 4, 5, 10, 4, 1, 6, 7, 3, 2, 7, 8]
 
 
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     defaultConfig = {"maxGenerations": 1,
                      "massConserved": False, # Not sure that this is actually working
                      "toZip": False,
-                     "sizeOfPopulation": 10000,
+                     "sizeOfPopulation": 100,
                      "numSpecies": 5,
                      "numReactions": 15,
                      "rateConstantScale": 50,

@@ -5,7 +5,9 @@ Created on Sat May  1 22:11:57 2021
 @author: hsauro
 """
 
-import os, sys, getopt 
+import getopt
+import os
+import sys
 import time
 from datetime import date
 from datetime import datetime
@@ -31,6 +33,6 @@ for i in range (numberOfRuns):
     print ("-----------------------------------------------------")
     print (" --- BATCH NUMBER --- " + str (i+1) + ' out of ' + str (numberOfRuns) + ' total.')
     print ("-----------------------------------------------------")   
-    os.system('python .\evolve.py' + ' -g 500')
+    os.system('python ./evolve.py' + ' -g 500')
 
 print ("Time taken to do batch runs = ", time.time() - start)
