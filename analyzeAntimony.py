@@ -1,13 +1,11 @@
 import os
 import numpy as np
 import pandas as pd
-
 import isMassConserved
+import damped_analysis as da
 from oscillatorDB import mongoMethods as mm
-
-
-
-
+import antimony_ev2 as aModel
+from shutil import rmtree
 
 
 def countReactions(astr):
@@ -142,3 +140,40 @@ def analyzeReactions(writeOutPath, fromDatabase=True, query=None, directory=None
 
     print(np.mean(all_uniuni_portion), np.mean(all_unibi_portion), np.mean(all_biuni_portion),
           np.mean(all_bibi_portion))
+
+def processModels(source_dir):
+    save_dir = os.path.join(os.getcwd(), 'oscillators')
+    os.mkdir(save_dir)
+    rxn_processed_dir = os.path.join(os.getcwd(), 'rxnProcessed')
+    os.mkdir(rxn_processed_dir)
+    true_dir = os.path.join(os.getcwd(), 'massConserved')
+    os.mkdir(true_dir)
+    false_dir = os.path.join(os.getcwd(), 'massNotConserved')
+    os.mkdir(false_dir)
+    # Check if any of the models are damped or go to infinity:
+    da.process_damped(source_dir, save_dir)
+    # Get rid of duplicate or null reactions:
+    for model in os.listdir(save_dir):
+        os.chdir(save_dir)
+        # Open the model and read the antimony string:
+        with open(model, 'r') as f:
+            ant_str = f.read()
+            f.close()
+        # process the antimony string and eliminate any duplicate or null reactions:
+        antModel = aModel.AntimonyModel(ant_str)
+        antimony = antModel.ant
+        # Save the processed model:
+        path = os.path.join(rxn_processed_dir, model)
+        with open(path, 'w') as f:
+            f.write(antimony)
+            f.close()
+        del antModel
+    # Sort the processed models to mass conserved or not:
+    isMassConserved.isMassConserved(rxn_processed_dir, true_dir, false_dir)
+    # Delete the temporary directories
+    rmtree(rxn_processed_dir)
+    rmtree(save_dir)
+    print(f'Processed models stored in:\n{true_dir}\n{false_dir}')
+
+
+
