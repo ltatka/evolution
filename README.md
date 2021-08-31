@@ -8,7 +8,7 @@ git submodule update --init --recursive
 
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sundials-install-linux sundials 
 
-cmake --build . --target install --config Release -j 12`
+cmake --build . --target install --config Release -j 12
 ```
 
 # Setting up environment
