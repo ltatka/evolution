@@ -24,6 +24,7 @@ import copy, sys, os, math, getopt, json, time, zipfile
 import evolUtils, uModel
 from uModel import TReaction
 from pprint import pprint
+import keyboard
 
 from datetime import date
 from datetime import datetime
@@ -69,6 +70,16 @@ class Evolver(object, metaclass=PostInitCaller):
             tu.buildNetworks.Settings.allowMassViolatingReactions = True
         tu.buildNetworks.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
 
+    def setRandomSeed(self, seed):
+        self.seed = seed
+        random.seed(seed)
+
+    def loadNewConfig(self, configFile):
+        self.currentConfig = loadConfiguration(configFile=configFile)
+        self.fitnessEvaluator = evalFitness.FitnessEvaluator(configFile=configFile)
+
+    def setMaxGeneration(self, maxNumber):
+        self.currentConfig["maxGenerations"] = maxNumber
     #_________________________________________________________________________________
     #    METHODS TO SET UP EVOLUTION PARAMETERS
     #_________________________________________________________________________________
@@ -79,7 +90,10 @@ class Evolver(object, metaclass=PostInitCaller):
 
     def printCurrentConfig(self):
         for item in self.currentConfig:
-            print(f"{item}: {self.currentConfig[item]}")
+            if item == 'seed':
+                print(f'seed: {self.seed}')
+            else:
+                print(f"{item}: {self.currentConfig[item]}")
 
     def makeTracker(self):
         self.tracker = {"fitnessArray": [],
@@ -292,20 +306,25 @@ class Evolver(object, metaclass=PostInitCaller):
         self.printCurrentConfig()
         self.makeTracker()
         population = self.makePopulation()
-        for i in range(self.currentConfig['maxGenerations']):
-            population = self.getNextGen(population)
-            self.savePopulation(population)
-            self.printProgress(i, population)
-            if population[0].fitness <= self.currentConfig['threshold']:
-                saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
+        print('Press q to exit process')
+        try:
+            for i in range(self.currentConfig['maxGenerations']):
+                population = self.getNextGen(population)
+                self.savePopulation(population)
+                self.printProgress(i, population)
+                if population[0].fitness <= self.currentConfig['threshold']:
+                    saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
+                    self.saveRun(saveFileName, population)
+                    print("\n\nSUCCESS!\n")
+                    break
+            if population[0].fitness > self.currentConfig['threshold']:
+                print("\n\nFAIL\n")
+                saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
                 self.saveRun(saveFileName, population)
-                print("\n\nSUCCESS!\n")
-                break
-        if population[0].fitness > self.currentConfig['threshold']:
-            print("\n\nFAIL\n")
-            saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
-            self.saveRun(saveFileName, population)
-        self.printSummary(population)
+            self.printSummary(population)
+        except KeyboardInterrupt:
+            return None
+
 
     # _________________________________________________________________________________
     #    METHODS FOR PRINTING AND SAVING PROGRESS
