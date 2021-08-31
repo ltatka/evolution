@@ -1,6 +1,6 @@
 import numpy as np
 import tellurium as te
-from evolve import readObjectiveFunction
+from evolUtils import readObjectiveFunction
 import random
 from copy import deepcopy
 from damped_analysis import isModelDampled
