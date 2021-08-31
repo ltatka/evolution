@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat May  1 22:11:57 2021
-
-@author: hsauro
-"""
-
-import getopt
 import os
-import sys
 import time
 from datetime import date
 from datetime import datetime
-
 import argparse
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--runs", default=10, type=int, help="Change the number of evolution trials")
