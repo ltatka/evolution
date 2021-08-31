@@ -1,31 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 30 15:55:44 2021
-
-@author: hsauro
-"""
-
-from uModel import TModel_
-from teUtils import teUtils as tu
-from uModel import TModel
-from uModel import TReaction
-from numba import jit
-
-import tellurium as te
-import roadrunner
-from teUtils import teUtils as tu
+import teUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
 import readObjData
 import evalFitness
 from uModel import TModel_
-import copy, sys, os, math, getopt, json, time, zipfile
-import evolUtils, uModel
+import sys, os, math, json, time, zipfile
+import uModel
 from uModel import TReaction
-from pprint import pprint
-import keyboard
-
 from datetime import date
 from datetime import datetime
 from configLoader import loadConfiguration
