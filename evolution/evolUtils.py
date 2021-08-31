@@ -1,4 +1,4 @@
-from teUtils import teUtils as tu
+import teUtils.teUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
