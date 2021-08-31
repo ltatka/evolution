@@ -1,4 +1,4 @@
-import teUtils as tu
+from teUtils import teUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -344,12 +344,12 @@ class Evolver(object, metaclass=PostInitCaller):
                 astr = convertToAntimony2(population[0])
                 zf.writestr("best_antimony.ant", astr)
                 zf.writestr("seed_" + str(self.seed) + ".txt", str(self.seed))
-
                 zf.writestr("config.txt", json.dumps(self.currentConfig) + '\n')
 
                 today = date.today()
                 now = datetime.now()
                 summaryStr = 'Date:' + today.strftime("%b-%d-%Y") + '\n'
+
                 summaryStr += 'Time:' + now.strftime("%H:%M:%S") + '\n'
                 self.tracker["timeTaken"] = time.time() - self.tracker["startTime"]
                 summaryStr += 'Time taken in seconds:' + str(math.trunc(self.tracker["timetaken"] * 100) / 100) + "\n"
