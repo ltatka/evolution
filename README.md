@@ -38,7 +38,7 @@ Create a new .json file with desired parameters. Here's a template with the defa
 ```
 {"maxGenerations": 400,
   "sizeOfPopulation": 40,
-  "massConserved": "True",
+  "massConserved": "False",
   "toZip": "False",
   "numSpecies": 10,
   "numReactions": 14,
