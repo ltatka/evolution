@@ -1,6 +1,6 @@
 {"maxGenerations": 400,
   "sizeOfPopulation": 40,
-  "massConserved": "True",
+  "massConserved": "False",
   "toZip": "False",
   "numSpecies": 10,
   "numReactions": 14,
