@@ -1,13 +1,33 @@
 # Evolve Oscillating Models
 
+### Note: I wrote and tested everything in Linux (Ubuntu) and I'm not sure if it works on other platforms
+
+
+# Installation
+Clone or fork this repo. To clone: 
+
+```git clone https://github.com/really-lilly/evolution.git```
+
 # Build sundials 
+Navigate to the evolution directory (```cd evolution```)
+
+Run this code block to initialize the submodules, navigate to the build files in Sundials, build Sundials (the ODE solver), and then return to the evolution directory.
+
+<b> Be sure to replace <platform> with whatever system you're using (eg sundials-install-linux). </b>
+  * Linux: linux
+  * Windows: win32
+
+Your system is the output of the python command ```sys.platform```
 
 ```
 git submodule update --init --recursive
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sundials-install-linux sundials 
+cd evolution/sundials/src
 
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../../sundials-install-<platform> ..
 cmake --build . --target install --config Release -j 12
+
+cd ../..
 ```
 
 # Setting up environment
