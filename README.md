@@ -1,7 +1,6 @@
 # Evolve Oscillating Models
 
 # Build sundials 
-## (works for linux)
 
 ```
 git submodule update --init --recursive
@@ -13,7 +12,7 @@ cmake --build . --target install --config Release -j 12
 
 # Setting up environment
 To set up a conda evironment with all the dependencies
-```conda env create -f env.yml```
+```conda env create -f environment.yml```
 (This works in linux, but not sure if it will elsewhere...)
 
 # Quick start
@@ -21,13 +20,18 @@ To run a batch of evolution with the default parameters:
 (first make sure you're in the sub directory evolution, (eg. /home/yourname/evolution/evolution)
 ```
 python batchrun.py
+```
+# Optional arguments
+There are four optional arguments that can be used in any combination and order. 
 
-```
-# Change number of batches
-To change the number of batches from the default (10), pass an optional argument:
-```
-python batchrun.py --runs 50
-```
+```python batchrun.py --runs 50``` Change the number of times the evolution script is run. The default is 10. 
+
+```python batchrun.py --numGenerations 500```Change the number of generations evolved with each run. The default is 400.
+
+```python batchrun.py --probabilities 0.3 0.3 0.3 0.1``` Change the probability of each reaction type when generating random networks. Order is UniUni, UniBi, BiUni, BiBi. The default is 0.1, 0.4, 0.4, 0.1
+
+```python batchrun.py --newConfigFile newParams.json```Use a new configuration file (see 'Change parameters' section below for defaults and instructions.
+
 
 # Change parameters
 Create a new .json file with desired parameters. Here's a template with the default configuration:
@@ -47,7 +51,7 @@ Create a new .json file with desired parameters. Here's a template with the defa
   "threshold": 10.5,
   "frequencyOfOutput": 10}
   ```
-When you run an evolution trial, you will have to pass the name of the new configuration file as an optional argument. 
+To use your new configuration, pass it as an optional argument when running batchrun
 ```
 python batchrun.py --newConfigFile <yourNewConfig>.json
 ```
