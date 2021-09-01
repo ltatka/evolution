@@ -1,4 +1,4 @@
-from teUtils import teUtils as tu
+import teUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -11,9 +11,14 @@ from uModel import TReaction
 from datetime import date
 from datetime import datetime
 from configLoader import loadConfiguration
-
 from uLoadCvode import TCvode
 import uLoadCvode
+
+# These are the reaction type numbers from teUtils to avoid capitalization annoyances.
+tUniUni = 0
+tBiUni = 1
+tUniBi = 2
+tBiBi = 3
 
 class PostInitCaller(type):
     def __call__(cls, *args, **kwargs):
@@ -23,20 +28,18 @@ class PostInitCaller(type):
 
 class Evolver(object, metaclass=PostInitCaller):
 
-    tu.buildNetworks.Settings.ReactionProbabilities.UniUni = 0.1
-    tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
-    tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
-    tu.buildNetworks.Settings.ReactionProbabilities.BiBi = 0.1
 
-    def __init__(self, configuration=None):
+    def __init__(self, configuration=None, probabilities = None):
         # If no configuration is given, load the default
         if not configuration:
             self.currentConfig = loadConfiguration()
         else:
             self.currentConfig = loadConfiguration(configFile=configuration)
+        self.builder = tu.buildNetworks # Evolver's instance of teUtils for preserving settings
         self.objectiveData = readObjectiveFunction()
         self.fitnessEvaluator = evalFitness.FitnessEvaluator(configuration)
         self.makeTracker()
+        self.setReactionProbabilities([0.1, 0.4, 0.4, 0.1])  # Set default reaction probabilites
 
     def post_init(self):
         self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
@@ -47,10 +50,10 @@ class Evolver(object, metaclass=PostInitCaller):
             self.seed = random.randrange(sys.maxsize)
         random.seed(self.seed)
         if self.currentConfig["massConserved"] == "True":
-            tu.buildNetworks.Settings.allowMassViolatingReactions = False
+            self.builder.Settings.allowMassViolatingReactions = False
         else:
-            tu.buildNetworks.Settings.allowMassViolatingReactions = True
-        tu.buildNetworks.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
+            self.builder.Settings.allowMassViolatingReactions = True
+        self.builder.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
 
     def setRandomSeed(self, seed):
         self.seed = seed
@@ -74,8 +77,15 @@ class Evolver(object, metaclass=PostInitCaller):
         for item in self.currentConfig:
             if item == 'seed':
                 print(f'seed: {self.seed}')
+            elif item == 'initialConditions':
+                print(f'initialConditions: {self.currentConfig["initialConditions"][:self.currentConfig["numSpecies"]]}')
             else:
                 print(f"{item}: {self.currentConfig[item]}")
+        print(f'Reaction probabilities: \n \
+        UniUni: {self.builder.Settings.ReactionProbabilities.UniUni}\n \
+        UniBi: {self.builder.Settings.ReactionProbabilities.UniBi}\n \
+        BiUni: {self.builder.Settings.ReactionProbabilities.BiUni}\n \
+        BiBi: {self.builder.Settings.ReactionProbabilities.BiBI}')
 
     def makeTracker(self):
         self.tracker = {"fitnessArray": [],
@@ -86,13 +96,13 @@ class Evolver(object, metaclass=PostInitCaller):
                         "nParameterChanges": 0,
                         "timetaken": 0}
 
-    def changeReactionProbabilites(self, uniuni, unibi, biuni, bibi):
-        if uniuni+unibi+biuni+bibi != 1.0:
+    def setReactionProbabilities(self, probabilityList):
+        if sum(probabilityList) != 1.0:
             raise ValueError('Probabilities do not add up to 1!')
-        tu.buildNetworks.Settings.ReactionProbabilities.UniUni = uniuni
-        tu.buildNetworks.Settings.ReactionProbabilities.UniBi = unibi
-        tu.buildNetworks.Settings.ReactionProbabilities.BiUni = biuni
-        tu.buildNetworks.Settings.ReactionProbabilities.BiBi = bibi
+        self.builder.Settings.ReactionProbabilities.UniUni = probabilityList[0]
+        self.builder.Settings.ReactionProbabilities.UniBi = probabilityList[0]
+        self.builder.Settings.ReactionProbabilities.BiUni = probabilityList[0]
+        self.builder.Settings.ReactionProbabilities.BiBI = probabilityList[0]
 
     #_________________________________________________________________________________
     #    METHODS FOR INDIVIDUAL EVOLUTION
@@ -104,13 +114,13 @@ class Evolver(object, metaclass=PostInitCaller):
         rt = random.randint(0, 3)  # Reaction type
         reaction = TReaction()
         reaction.reactionType = rt
-        if rt == tu.buildNetworks.TReactionType.UniUni:
+        if rt == tUniUni:
             r1 = [random.choice(floats)]
             p1 = [random.choice(floats)]
             reaction.reactant1 = r1[0]
             reaction.product1 = p1[0]
 
-        if rt == tu.buildNetworks.TReactionType.BiUni:
+        if rt == tBiUni:
             r1 = [random.choice(floats), random.choice(floats)]
             p1 = [random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -125,7 +135,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 if count > 50:  # quit trying after 50 attempts
                     return model
 
-        if rt == tu.buildNetworks.TReactionType.UniBi:
+        if rt == tUniBi:
             r1 = [random.choice(floats)]
             p1 = [random.choice(floats), random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -140,7 +150,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 if count > 50:  # quit trying after 50 attempts
                     return model
 
-        if rt == tu.buildNetworks.TReactionType.BiBi:
+        if rt == tBiBi:
             r1 = [random.choice(floats), random.choice(floats)]
             p1 = [random.choice(floats), random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -211,7 +221,7 @@ class Evolver(object, metaclass=PostInitCaller):
         return population
 
     def makeModel(self, nSpecies, nReactions):
-        model = tu.buildNetworks.getRandomNetworkDataStructure(nSpecies, nReactions)
+        model = self.builder.getRandomNetworkDataStructure(nSpecies, nReactions)
         nFloats = len(model[0])
         nBoundary = len(model[1])
         model.insert(0, nFloats)
@@ -230,11 +240,11 @@ class Evolver(object, metaclass=PostInitCaller):
             reaction.reactionType = r[0]
 
             reaction.reactant1 = r[1][0]
-            if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+            if reaction.reactionType == tBiUni or reaction.reactionType == tBiBi:
                 reaction.reactant2 = r[1][1]
 
             reaction.product1 = r[2][0]
-            if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+            if reaction.reactionType == tUniBi or reaction.reactionType == tBiBi:
                 reaction.product2 = r[2][1]
 
             reaction.rateConstant = r[3]
@@ -288,7 +298,6 @@ class Evolver(object, metaclass=PostInitCaller):
         self.printCurrentConfig()
         self.makeTracker()
         population = self.makePopulation()
-        print('Press q to exit process')
         try:
             for i in range(self.currentConfig['maxGenerations']):
                 population = self.getNextGen(population)
@@ -368,7 +377,7 @@ class Evolver(object, metaclass=PostInitCaller):
                     for j in range(len(pop)):
                         fileName = "populations/generation_" + str(index) + '/individual_' + str(j) + '.txt'
                         popSummary = '# Fitness = ' + str(pop[j].fitness) + '\n'
-                        popSummary += evolUtils.convertToAntimony2(pop[j]);
+                        popSummary += convertToAntimony2(pop[j]);
                         zf.writestr(fileName, popSummary)
             finally:
                 zf.close()
@@ -451,24 +460,24 @@ def convertToAntimony2(model):
 
     for i in range(nReactions):
         reaction = reactions[i]
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UniUni:
+        if reaction.reactionType == tUniUni:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.product1)
             astr += S1 + ' -> ' + S2
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni:
+        if reaction.reactionType == tBiUni:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.reactant2)
             S3 = 'S' + str(reaction.product1)
             astr += S1 + ' + ' + S2 + ' -> ' + S3
             astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi:
+        if reaction.reactionType == tUniBi:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.product1)
             S3 = 'S' + str(reaction.product2)
             astr += S1 + ' -> ' + S2 + '+' + S3
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+        if reaction.reactionType == tBiBi:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.reactant2)
             S3 = 'S' + str(reaction.product1)
@@ -525,24 +534,24 @@ def convertToAntimony(model):
 
     for i in range(nReactions):
         reaction = reactions[i + 1]
-        if reaction[0] == tu.buildNetworks.TReactionType.UniUni:
+        if reaction[0] == tUniUni:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[2][0])
             astr += S1 + ' -> ' + S2
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BiUni:
+        if reaction[0] == tBiUni:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[1][1])
             S3 = 'S' + str(reaction[2][0])
             astr += S1 + ' + ' + S2 + ' -> ' + S3
             astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.UniBi:
+        if reaction[0] == tUniBi:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[2][0])
             S3 = 'S' + str(reaction[2][1])
             astr += S1 + ' -> ' + S2 + '+' + S3
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BiBi:
+        if reaction[0] == tBiBi:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[1][1])
             S3 = 'S' + str(reaction[2][0])
