@@ -5,3 +5,6 @@
 	path = oscillatorDB
 	url = https://github.com/really-lilly/oscillatorDB.git
 
+[submodule "teUtils"]
+	path = teUtils
+	url = https://github.com/sys-bio/teUtils.git
