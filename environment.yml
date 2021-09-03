@@ -115,7 +115,6 @@ dependencies:
     - tenuml==1.1.1.4
     - tesbml==5.18.1.2
     - tesedml==0.4.5.3
-    - teutils==2.4
     - toml==0.10.2
     - tornado==6.1
     - traitlets==5.0.5
