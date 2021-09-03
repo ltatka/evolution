@@ -1,4 +1,4 @@
-import teUtils as tu
+import modTeUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -13,12 +13,6 @@ from datetime import datetime
 from configLoader import loadConfiguration
 from uLoadCvode import TCvode
 import uLoadCvode
-
-# These are the reaction type numbers from teUtils to avoid capitalization annoyances.
-tUniUni = 0
-tBiUni = 1
-tUniBi = 2
-tBiBi = 3
 
 class PostInitCaller(type):
     def __call__(cls, *args, **kwargs):
@@ -35,7 +29,7 @@ class Evolver(object, metaclass=PostInitCaller):
             self.currentConfig = loadConfiguration()
         else:
             self.currentConfig = loadConfiguration(configFile=configuration)
-        self.builder = tu.buildNetworks # Evolver's instance of teUtils for preserving settings
+        self.builder = tu # Evolver's instance of teUtils for preserving settings
         self.objectiveData = readObjectiveFunction()
         self.fitnessEvaluator = evalFitness.FitnessEvaluator(configuration)
         self.makeTracker()
@@ -53,6 +47,10 @@ class Evolver(object, metaclass=PostInitCaller):
             self.builder.Settings.allowMassViolatingReactions = False
         else:
             self.builder.Settings.allowMassViolatingReactions = True
+        if self.currentConfig["allowAutocatalysis"] == "True":
+            self.autocatalysis = True
+        else:
+            self.autocatalysis = False
         self.builder.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
 
     def setRandomSeed(self, seed):
@@ -109,56 +107,90 @@ class Evolver(object, metaclass=PostInitCaller):
     #_________________________________________________________________________________
 
     def addReaction(self, model):
+        nSpecies = self.currentConfig['numSpecies']
         self.tracker["nAddReaction"] += 1
         floats = range(0, model.numFloats)  # numFloats = number of floating species
         rt = random.randint(0, 3)  # Reaction type
         reaction = TReaction()
         reaction.reactionType = rt
-        if rt == tUniUni:
-            r1 = [random.choice(floats)]
-            p1 = [random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.product1 = p1[0]
-
-        if rt == tBiUni:
-            r1 = [random.choice(floats), random.choice(floats)]
-            p1 = [random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.reactant2 = r1[1]
-            reaction.product1 = p1[0]
-        if self.currentConfig["massConserved"]:
-            count = 0
-            while reaction.product1 == reaction.reactant1 or reaction.product1 == reaction.reactant2:
-                p1 = [random.choice(floats)]
-                reaction.product1 = p1[0]
-                count += 1
-                if count > 50:  # quit trying after 50 attempts
-                    return model
-
-        if rt == tUniBi:
-            r1 = [random.choice(floats)]
-            p1 = [random.choice(floats), random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.product1 = p1[0]
-            reaction.product2 = p1[1]
-        if self.currentConfig["massConserved"]:
-            count += 1
-            while reaction.reactant1 == reaction.product1 or reaction.reactant1 == reaction.product2:
-                r1 = [random.choice(floats)]
-                reaction.reactant1 = r1[0]
-                count += 1
-                if count > 50:  # quit trying after 50 attempts
-                    return model
-
-        if rt == tBiBi:
-            r1 = [random.choice(floats), random.choice(floats)]
-            p1 = [random.choice(floats), random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.reactant2 = r1[1]
-            reaction.product1 = p1[0]
-            reaction.product2 = p1[1]
-
         reaction.rateConstant = random.random() * self.currentConfig['rateConstantScale']
+
+        if rt == tu.TReactionType.UniUni:
+            # UniUni
+            reactant = random.randint(0, nSpecies - 1)
+            product = random.randint(0, nSpecies - 1)
+            # Disallow S1 -> S1 type of reaction
+            while product == reactant:
+                product = random.randint(0, nSpecies - 1)
+            reaction.reactant1 = reactant
+            reaction.product1 = product
+            model.reactions.append(reaction)
+
+        elif rt == tu.TReactionType.BiUni:
+            # BiUni
+            # Pick two reactants
+            reactant1 = random.randint(0, nSpecies - 1)
+            reactant2 = random.randint(0, nSpecies - 1)
+            if tu.Settings.allowMassViolatingReactions:
+                product = random.randint(0, nSpecies - 1)
+            else:
+                # pick a product but only products that don't include the reactants
+                species = range(nSpecies)
+                # Remove reactant1 and 2 from the species list
+                species = np.delete(species, [reactant1, reactant2], axis=0)
+                if len(species) == 0:
+                    raise Exception("Unable to pick a species why maintaining mass conservation")
+                # Then pick a product from the reactants that are left
+                product = species[random.randint(0, len(species) - 1)]
+            reaction.reactant1 = reactant1
+            reaction.reactant2 = reactant2
+            reaction.product1 = product
+
+        elif rt == tu.TReactionType.UniBi:
+            # UniBi
+            reactant1 = random.randint(0, nSpecies - 1)
+            if self.autocatalysis or tu.Settings.allowMassViolatingReactions:
+                product1 = random.randint(0, nSpecies - 1)
+                product2 = random.randint(0, nSpecies - 1)
+            # If we don't want autocatalysis, then UniBi reactions must be mass conserved.
+            else:
+                # pick a product but only products that don't include the reactant
+                species = range(nSpecies)
+                # Remove reactant1 from the species list
+                species = np.delete(species, [reactant1], axis=0)
+                if len(species) == 0:
+                    raise Exception("Unable to pick a species why maintaining mass conservation")
+
+                # Then pick a product from the reactants that are left
+                product1 = species[random.randint(0, len(species) - 1)]
+                product2 = species[random.randint(0, len(species) - 1)]
+            reaction.reactant1 = reactant1
+            reaction.product1 = product1
+            reaction.product2 = product2
+
+        elif rt == tu.TReactionType.BiBi:
+            # BiBi
+            reactant1 = random.randint(0, nSpecies - 1)
+            reactant2 = random.randint(0, nSpecies - 1)
+            if not self.autocatalysis:
+                # If we don't want autocatalysis, then neither of the products can be the same as the reactant
+                species = range(nSpecies)
+                # Remove reactant1 and 2 from the species list
+                species = np.delete(species, [reactant1, reactant2], axis=0)
+                if len(species) == 0:
+                    raise Exception("Unable to pick a species why mainting mass conservation")
+                    # Then pick a product from the reactants that are left
+                product1 = species[random.randint(0, len(species) - 1)]
+                product2 = species[random.randint(0, len(species) - 1)]
+            else:
+                # if we allow autocatalyis, then we can pick any products, the only risk being that they are the same
+                # as the reactants so the reaction is irrelevant
+                product1 = random.randint(0, nSpecies - 1)
+                product2 = random.randint(0, nSpecies - 1)
+            reaction.reactant1 = reactant1
+            reaction.reactant2 = reactant2
+            reaction.product1 = product1
+            reaction.product2 = product2
         model.reactions.append(reaction)
         return model
 
@@ -221,7 +253,7 @@ class Evolver(object, metaclass=PostInitCaller):
         return population
 
     def makeModel(self, nSpecies, nReactions):
-        model = self.builder.getRandomNetworkDataStructure(nSpecies, nReactions)
+        model = self.builder.getRandomNetworkDataStructure(nSpecies, nReactions, allowAutocatalysis=self.autocatalysis)
         nFloats = len(model[0])
         nBoundary = len(model[1])
         model.insert(0, nFloats)
@@ -240,11 +272,11 @@ class Evolver(object, metaclass=PostInitCaller):
             reaction.reactionType = r[0]
 
             reaction.reactant1 = r[1][0]
-            if reaction.reactionType == tBiUni or reaction.reactionType == tBiBi:
+            if reaction.reactionType == tu.TReactionType.BiUni or reaction.reactionType == tu.TReactionType.BiBi:
                 reaction.reactant2 = r[1][1]
 
             reaction.product1 = r[2][0]
-            if reaction.reactionType == tUniBi or reaction.reactionType == tBiBi:
+            if reaction.reactionType == tu.TReactionType.UniBi or reaction.reactionType == tu.TReactionType.BiBi:
                 reaction.product2 = r[2][1]
 
             reaction.rateConstant = r[3]
@@ -460,24 +492,24 @@ def convertToAntimony2(model):
 
     for i in range(nReactions):
         reaction = reactions[i]
-        if reaction.reactionType == tUniUni:
+        if reaction.reactionType == tu.TReactionType.UniUni:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.product1)
             astr += S1 + ' -> ' + S2
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tBiUni:
+        if reaction.reactionType == tu.TReactionType.BiUni:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.reactant2)
             S3 = 'S' + str(reaction.product1)
             astr += S1 + ' + ' + S2 + ' -> ' + S3
             astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction.reactionType == tUniBi:
+        if reaction.reactionType == tu.TReactionType.UniBi:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.product1)
             S3 = 'S' + str(reaction.product2)
             astr += S1 + ' -> ' + S2 + '+' + S3
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tBiBi:
+        if reaction.reactionType == tu.TReactionType.BiBi:
             S1 = 'S' + str(reaction.reactant1)
             S2 = 'S' + str(reaction.reactant2)
             S3 = 'S' + str(reaction.product1)
@@ -534,24 +566,24 @@ def convertToAntimony(model):
 
     for i in range(nReactions):
         reaction = reactions[i + 1]
-        if reaction[0] == tUniUni:
+        if reaction[0] == tu.TReactionType.UniUni:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[2][0])
             astr += S1 + ' -> ' + S2
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tBiUni:
+        if reaction[0] == tu.TReactionType.BiUni:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[1][1])
             S3 = 'S' + str(reaction[2][0])
             astr += S1 + ' + ' + S2 + ' -> ' + S3
             astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction[0] == tUniBi:
+        if reaction[0] == tu.TReactionType.UniBi:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[2][0])
             S3 = 'S' + str(reaction[2][1])
             astr += S1 + ' -> ' + S2 + '+' + S3
             astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tBiBi:
+        if reaction[0] == tu.TReactionType.BiBi:
             S1 = 'S' + str(reaction[1][0])
             S2 = 'S' + str(reaction[1][1])
             S3 = 'S' + str(reaction[2][0])

@@ -1,5 +1,6 @@
 {"maxGenerations": 400,
   "sizeOfPopulation": 40,
+  "allowAutocatalysis": "False",
   "massConserved": "False",
   "toZip": "True",
   "numSpecies": 10,

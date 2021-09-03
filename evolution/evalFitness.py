@@ -1,17 +1,13 @@
-
 import numpy as np
-from scipy.integrate import odeint, RK45, solve_ivp
-import teUtils as tu
-import matplotlib.pyplot as plt
-import math, uModel
+from scipy.integrate import solve_ivp
+import modTeUtils as tu
 from numba import jit
 from configLoader import loadConfiguration
-#import warnings
 
-UNIUNI = 0
-BIUNI = 1
-UNIBI = 2
-BIBI = 3
+UNIUNI = tu.TReactionType.UniUni
+UNIBI = tu.TReactionType.UniBi
+BIUNI = tu.TReactionType.BiUni
+BIBI = tu.TReactionType.BiBi
 
 
 class FitnessEvaluator():
@@ -118,25 +114,24 @@ def computeRates (dydt, y, reactionType, rateConstant, reactant1, reactant2, pro
   
     
 def getdydt2 (t, y, model):
-    #try:
-        nFloats = model.numFloats
-        nBoundary = model.numBoundary
-        reactions = model.reactions
-        nReactions = len (model.reactions)
-        dydt = np.zeros (nFloats + nBoundary)
-        for i in range (nReactions):
-            reaction = reactions[i]  
-            computeRates (dydt, y, 
-                        reaction.reactionType, 
-                        reaction.rateConstant, 
-                        reaction.reactant1, 
-                        reaction.reactant2, 
-                        reaction.product1,
-                        reaction.product2)
-          
-        # zero all the boundary dydts
-        dydt[nFloats:] = 0
-        return dydt
+    nFloats = model.numFloats
+    nBoundary = model.numBoundary
+    reactions = model.reactions
+    nReactions = len (model.reactions)
+    dydt = np.zeros (nFloats + nBoundary)
+    for i in range (nReactions):
+        reaction = reactions[i]
+        computeRates (dydt, y,
+                    reaction.reactionType,
+                    reaction.rateConstant,
+                    reaction.reactant1,
+                    reaction.reactant2,
+                    reaction.product1,
+                    reaction.product2)
+
+    # zero all the boundary dydts
+    dydt[nFloats:] = 0
+    return dydt
     #except Exception as err:
     #    print ("ERROR in getdydt-----------------------------")
     #    print (err)
@@ -145,57 +140,56 @@ def getdydt2 (t, y, model):
 def computedydt (y, reactant, rateConstant):
     return y[reactant]*rateConstant
 
-#@jit(nopython=True)
+@jit(nopython=True)
 def getdydt (t, y, nFloats, nBoundary, reactions):
-    #try:
-        nReactions = len (reactions)
-        dydt = np.zeros (nFloats + nBoundary)
-        for i in range (nReactions):
-            reaction = reactions[i] # +1 to jump over number of reactions entry         
-            if reaction.reactionType == tu.buildNetworks.TReactionType.UNIUNI:
-                reactant1 = reaction.reactant1
-                product1 = reaction.product1
-                rateConstant = reaction.rateConstant
-                rate = computedydt (y, reactant1, rateConstant)
-                rate = y[reactant1]*rateConstant
-                dydt[reactant1] -= rate
-                dydt[product1] += rate                
-                   
-            if reaction.reactionType == tu.buildNetworks.TReactionType.UNIBI:
-                reactant1 = reaction.reactant1
-                product1 = reaction.product1
-                product2 = reaction.product2
-                rateConstant = reaction.rateConstant
-                rate = y[reactant1]*rateConstant
-                dydt[reactant1] -= rate
-                dydt[product1] += rate
-                dydt[product2] += rate                
-                   
-            if reaction.reactionType == tu.buildNetworks.TReactionType.BIUNI:
-                reactant1 = reaction.reactant1
-                reactant2 = reaction.reactant2
-                product1 = reaction.product1
-                rateConstant = reaction.rateConstant
-                rate = y[reactant1]*y[reactant2]*rateConstant
-                dydt[reactant1] -= rate
-                dydt[reactant2] -= rate
-                dydt[product1] += rate
-        
-            if reaction.reactionType == tu.buildNetworks.TReactionType.BIBI:
-                reactant1 = reaction.reactant1
-                reactant2 = reaction.reactant2
-                product1 = reaction.product1
-                product2 = reaction.product2
-                rateConstant = reaction.rateConstant
-                rate = y[reactant1]*y[reactant2]*rateConstant
-                dydt[reactant1] -= rate
-                dydt[reactant2] -= rate
-                dydt[product1] += rate
-                dydt[product2] += rate
-         
-        # zero all the boundary dydts
-        dydt[nFloats:] = 0
-        return dydt
+    nReactions = len (reactions)
+    dydt = np.zeros (nFloats + nBoundary)
+    for i in range (nReactions):
+        reaction = reactions[i] # +1 to jump over number of reactions entry
+        if reaction.reactionType == UNIUNI:
+            reactant1 = reaction.reactant1
+            product1 = reaction.product1
+            rateConstant = reaction.rateConstant
+            rate = computedydt (y, reactant1, rateConstant)
+            rate = y[reactant1]*rateConstant
+            dydt[reactant1] -= rate
+            dydt[product1] += rate
+
+        elif reaction.reactionType == UNIBI:
+            reactant1 = reaction.reactant1
+            product1 = reaction.product1
+            product2 = reaction.product2
+            rateConstant = reaction.rateConstant
+            rate = y[reactant1]*rateConstant
+            dydt[reactant1] -= rate
+            dydt[product1] += rate
+            dydt[product2] += rate
+
+        elif reaction.reactionType == BIUNI:
+            reactant1 = reaction.reactant1
+            reactant2 = reaction.reactant2
+            product1 = reaction.product1
+            rateConstant = reaction.rateConstant
+            rate = y[reactant1]*y[reactant2]*rateConstant
+            dydt[reactant1] -= rate
+            dydt[reactant2] -= rate
+            dydt[product1] += rate
+
+        elif reaction.reactionType == BIBI:
+            reactant1 = reaction.reactant1
+            reactant2 = reaction.reactant2
+            product1 = reaction.product1
+            product2 = reaction.product2
+            rateConstant = reaction.rateConstant
+            rate = y[reactant1]*y[reactant2]*rateConstant
+            dydt[reactant1] -= rate
+            dydt[reactant2] -= rate
+            dydt[product1] += rate
+            dydt[product2] += rate
+
+    # zero all the boundary dydts
+    dydt[nFloats:] = 0
+    return dydt
 
   
 def cvodeModel (t, y, ydot, user_data):
@@ -212,7 +206,5 @@ def cvodeModel (t, y, ydot, user_data):
         currentModel.cvode.setVectorValue(ydot, i, dydt[i])
     return 0
 
-
-initialConditions = [1,5,9,3,10,3,7,1,6,3,10,11,4,6,2,7,1,9,5,7,2,4,5,10,4,1,6,7,3,2,7,8]
 
 
