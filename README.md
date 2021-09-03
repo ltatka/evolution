@@ -59,7 +59,7 @@ Create a new .json file with desired parameters. Here's a template with the defa
 {"maxGenerations": 400,
   "sizeOfPopulation": 40,
   "massConserved": "False",
-  "toZip": "False",
+  "toZip": "True",
   "numSpecies": 10,
   "numReactions": 14,
   "rateConstantScale": 50,
