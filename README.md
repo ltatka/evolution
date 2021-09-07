@@ -22,7 +22,10 @@ Your system is the output of the python command ```sys.platform```
 ```
 git submodule update --init --recursive
 
-cd sundials/src
+cd sundials
+
+mkdir build
+cd build
 
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../../sundials-install-<platform> ..
 cmake --build . --target install --config Release -j 12
