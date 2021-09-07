@@ -2,7 +2,7 @@
 """ A module for creating random network models """
 """ Modified from https://github.com/sys-bio/teUtils.git"""
 
-import tellurium as _te
+
 import random as _random
 
 importRoadrunnerFail = False;
