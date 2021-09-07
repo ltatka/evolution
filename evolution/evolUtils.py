@@ -98,9 +98,9 @@ class Evolver(object, metaclass=PostInitCaller):
         if sum(probabilityList) != 1.0:
             raise ValueError('Probabilities do not add up to 1!')
         self.builder.Settings.ReactionProbabilities.UniUni = probabilityList[0]
-        self.builder.Settings.ReactionProbabilities.UniBi = probabilityList[0]
-        self.builder.Settings.ReactionProbabilities.BiUni = probabilityList[0]
-        self.builder.Settings.ReactionProbabilities.BiBI = probabilityList[0]
+        self.builder.Settings.ReactionProbabilities.UniBi = probabilityList[1]
+        self.builder.Settings.ReactionProbabilities.BiUni = probabilityList[2]
+        self.builder.Settings.ReactionProbabilities.BiBI = probabilityList[3]
 
     #_________________________________________________________________________________
     #    METHODS FOR INDIVIDUAL EVOLUTION
