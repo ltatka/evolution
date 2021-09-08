@@ -4,6 +4,7 @@ from distro import id
 import numpy as np
 from os.path import exists, join, dirname, isdir
 from sys import platform
+from pathlib import Path
 
 CV_BDF = 2
 CV_ADAMS = 1
@@ -11,21 +12,25 @@ CV_NORMAL = 1
 CV_SUCCESS = 0
 
 # sundials is a submodule.
-PROJ_ROOT = dirname(__file__)  # top level root directory
-SUNDIALS_SRC = join(PROJ_ROOT, "sundials")  # sundials source directory
-SUNDIALS_INSTALL_PREFIX = join(SUNDIALS_SRC, f"sundials-install-{platform}")
+parent_dir = Path(dirname(__file__)) # top level root directory)
+PROJ_ROOT = parent_dir.parent.absolute()
+print(f" Root: {PROJ_ROOT}")
+
+#SUNDIALS_SRC = join(PROJ_ROOT, "sundials")  # sundials source directory
+SUNDIALS_INSTALL_PREFIX = join(PROJ_ROOT, f"sundials-install-{platform}")
 
 
-print(SUNDIALS_INSTALL_PREFIX)
-if not isdir(SUNDIALS_INSTALL_PREFIX):
-    raise ValueError("""
-You need to install sundials using cmake. Use:
 
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
-    cmake --build . --target install --config Release -j 12
-
-where platform is the output from sys.platform in Python.
-""")
+# print(f"INstall prefix: {SUNDIALS_INSTALL_PREFIX}")
+# if not isdir(SUNDIALS_INSTALL_PREFIX):
+#     raise ValueError("""
+# You need to install sundials using cmake. Use:
+#
+#     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
+#     cmake --build . --target install --config Release -j 12
+#
+# where platform is the output from sys.platform in Python.
+# """)
 
 
 
