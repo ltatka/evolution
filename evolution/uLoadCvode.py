@@ -1,8 +1,8 @@
 import ctypes as ct
 from typing import List
-
+from distro import id
 import numpy as np
-from os.path import exists, isfile, isdir, split, splitext, join, dirname
+from os.path import exists, join, dirname, isdir
 from sys import platform
 
 CV_BDF = 2
@@ -13,31 +13,37 @@ CV_SUCCESS = 0
 # sundials is a submodule.
 PROJ_ROOT = dirname(__file__)  # top level root directory
 SUNDIALS_SRC = join(PROJ_ROOT, "sundials")  # sundials source directory
-#SUNDIALS_INSTALL_PREFIX = join(SUNDIALS_SRC, f"sundials-install-{platform}")
-SUNDIALS_INSTALL_PREFIX = "/home/hellsbells/evolution/sundials-install-linux"
+SUNDIALS_INSTALL_PREFIX = join(SUNDIALS_SRC, f"sundials-install-{platform}")
 
-# print(SUNDIALS_INSTALL_PREFIX)
-# if not isdir(SUNDIALS_INSTALL_PREFIX):
-#     raise ValueError("""
-# You need to install sundials using cmake. Use:
-#
-#     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
-#     cmake --build . --target install --config Release -j 12
-#
-# where platform is the output from sys.platform in Python.
-# """)
 
-SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib")
+print(SUNDIALS_INSTALL_PREFIX)
+if not isdir(SUNDIALS_INSTALL_PREFIX):
+    raise ValueError("""
+You need to install sundials using cmake. Use:
+
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../sundials-install-{platform} ..
+    cmake --build . --target install --config Release -j 12
+
+where platform is the output from sys.platform in Python.
+""")
+
+
 
 PLATFORM_SHARED_LIBRARY_EXTENSION = None
 PLATFORM_SHARED_LIBRARY_PREFIX = None
+
 if platform == "win32":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "dll"
     PLATFORM_SHARED_LIBRARY_PREFIX = ""
 elif platform == "linux":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "so"
-    PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
-    pass
+    distribution = id()
+    if distribution == "centos":
+        PLATFORM_SHARED_LIBRARY_PREFIX = "lib64"
+        SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib64")
+    else:
+        PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
+        SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib")
 elif platform == "darwin":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "dylib"
     PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
