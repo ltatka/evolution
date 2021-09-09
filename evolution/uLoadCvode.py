@@ -44,7 +44,7 @@ elif platform == "linux":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "so"
     distribution = id()
     if distribution == "centos":
-        PLATFORM_SHARED_LIBRARY_PREFIX = "lib64"
+        PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
         SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib64")
     else:
         PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
