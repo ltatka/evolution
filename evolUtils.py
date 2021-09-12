@@ -40,12 +40,25 @@ savedPopulations = []
 
 currentConfig = configLoader.loadConfiguration()
 
+initialConditions = currentConfig["initialConditions"]
+
+
+
+def makeTracker():
+    tracker = {"fitnessArray": [],
+                "savedPopulations": [],
+                "startTime": time.time(),
+                "nAddReaction": 0,
+                "nDeleteReactions": 0,
+                "nParameterChanges": 0,
+                "timetaken": 0}
+    return tracker
+
+
 def readObjectiveFunction():
     result = readObjData.ObjectiveFunctionData()
     f = open("objectivefunction.txt", "r")
-
     astr = f.readline()  # Dump the first comment line
-
     astr = f.readline()
     aList = astr.split()
     result.timeStart = float(aList[1])
@@ -62,8 +75,6 @@ def readObjectiveFunction():
         result.outputData.append(float(f.readline()))
     f.close()
     return result
-
-
 
 def addReaction(model):
     global nAddReaction
@@ -165,62 +176,6 @@ def testSimulation(model, timeEnd, numberOfPoints):
     plt.show()
 
 
-def refactor(model):
-    nFloats = model[TModel_.nFloats]
-    nBoundary = model[TModel_.nBoundary]
-    reactions = model[TModel_.reactionList]
-    nReactions = model[TModel_.reactionList][0]
-
-    # Create map
-    rm = list(model[TModel_.fullSpeciesList])
-    # This is the mapping structure, two lists [[X], [Y]], X maps to Y
-    rm = [rm] + [(list(range(len(model[TModel_.fullSpeciesList]))))]
-
-    model[TModel_.fullSpeciesList] = rm[1]
-    model[TModel_.boundaryList] = rm[1][nFloats:]
-
-    for r in model[TModel_.reactionList][1:]:  # don't include the number of reactions
-        if r[0] == tu.buildNetworks.TReactionType.UNIUNI:
-            oldr = r[1][0]
-            new = rm[0].index(oldr)
-            r[1][0] = new
-
-            oldr = r[2][0]
-            new = rm[0].index(oldr)
-            r[2][0] = new
-
-        if r[0] == tu.buildNetworks.TReactionType.BIUNI:
-            oldr = r[1][0];
-            r[1][0] = rm[0].index(oldr);
-            oldr = r[1][1];
-            r[1][1] = rm[0].index(oldr);
-
-            oldr = r[2][0];
-            r[2][0] = rm[0].index(oldr)
-
-        if r[0] == tu.buildNetworks.TReactionType.UNIBI:
-            oldr = r[1][0];
-            r[1][0] = rm[0].index(oldr);
-
-            oldr = r[2][0];
-            r[2][0] = rm[0].index(oldr)
-            oldr = r[2][1];
-            r[2][1] = rm[0].index(oldr)
-
-        if r[0] == tu.buildNetworks.TReactionType.BIBI:
-            oldr = r[1][0];
-            r[1][0] = rm[0].index(oldr);
-            oldr = r[1][1];
-            r[1][1] = rm[0].index(oldr);
-
-            oldr = r[2][0];
-            r[2][0] = rm[0].index(oldr)
-            oldr = r[2][1];
-            r[2][1] = rm[0].index(oldr)
-
-    return model
-
-
 def refactorMmodel(model):
     find = model[TModel_.fullSpeciesList]
     space = model[TModel_.reactionList]
@@ -236,7 +191,7 @@ def refactorMmodel(model):
     return ([model[0], model[1], find, model[4], False, 0])
 
 
-initialConditions = [1, 5, 9, 3, 10, 3, 7, 1, 6, 3, 10, 11, 4, 6, 2, 7, 1, 9, 5, 7, 2, 4, 5, 10, 4, 1, 6, 7, 3, 2, 7, 8]
+
 
 
 def makeModel(nSpecies, nReactions):
@@ -250,7 +205,7 @@ def makeModel(nSpecies, nReactions):
     model.insert(4, initialConditions[:nFloats + nBoundary])
     model.append(0.0)  # Append fitness variable
 
-    model = refactor(model)
+    # model = refactor(model)
 
     amodel = uModel.TModel()
     amodel.numFloats = nFloats
