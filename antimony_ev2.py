@@ -1,13 +1,9 @@
 import numpy as np
 import tellurium as te
-from dataclasses import dataclass
-import readObjData
-from evolve import readObjectiveFunction
+from evolUtils import readObjectiveFunction
 import random
 from copy import deepcopy
-from math import trunc
-import operator
-from cleanUpMethods import isModelDampled
+from damped_analysis import isModelDampled
 
 
 
@@ -312,75 +308,4 @@ class AntimonyModel(object, metaclass=PostInitCaller):
 #             print(f'GENERATION: {i}')
 #             print(population[0].fitness)
 #
-# lines = '''
-# var S0
-# var S1
-# var S2
-# var S3
-# var S4
-# var S5
-# ext S6
-# ext S7
-# ext S8
-# ext S9
-# var S0
-# var S1
-# var S2
-# var S3
-# var S4
-# var S5
-# ext S6
-# ext S7
-# ext S8
-# ext S9
-# S0 + S5 -> S2; k0*S0*S5
-# S5 + S3 -> S3; k1*S5*S3
-# S8 + S1 -> S0; k2*S8*S1
-# S5 + S5 -> S4; k3*S5*S5
-# S3 -> S2; k4*S3
-# S9 + S6 -> S1; k5*S9*S6
-# S4 + S5 -> S4; k6*S4*S5
-# S0 -> S3; k7*S0
-# S2 + S7 -> S5; k8*S2*S7
-# S3 -> S2+S1; k9*S3
-# S4 + S3 -> S5; k10*S4*S3
-# S0 -> S3+S1; k11*S0
-# S5 + S0 -> S3 + S2; k12*S5*S0
-# S3 + S4 -> S5; k13*S3*S4
-# S5 -> S3; k14*S5
-# S5 -> S5; k15*S5
-# k0 = 31.776577914011128
-# k1 = 28.93189376090495
-# k2 = 34.14674163481327
-# k3 = 8.016119976696222
-# k4 = 43.08159898790339
-# k5 = 45.18697771178778
-# k6 = 5.457040119751645
-# k7 = 12.826847292282617
-# k8 = 27.367525833763622
-# k9 = 80.18139941218446
-# k10 = 102.4821285436791
-# k11 = 63.95124607780075
-# k12 = 3.0938974149561655
-# k13 = 93.54537634215069
-# k14 = 0.059914800421738044
-# k15 = 43.723318200629265
-# S0 = 1.0
-# S1 = 5.0
-# S2 = 9.0
-# S3 = 3.0
-# S4 = 10.0
-# S5 = 3.0
-# S6 = 7.0
-# S7 = 1.0
-# S8 = 6.0
-# S9 = 3.0
-# '''
 #
-#
-#
-# isModelDampled(lines)
-# model = AntimonyModel(lines, removeDupes=False, objectiveData=False)
-# print(model.antLines)
-#
-# model.deleteUnecessaryReactions()

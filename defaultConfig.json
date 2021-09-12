@@ -1,1 +1,15 @@
-{"maxGenerations": 400, "sizeOfPopulation": 40, "numSpecies": 10, "numReactions": 14, "rateConstantScale": 50, "probabilityMutateRateConstant": 0.7, "address": {"house": "Penrodyn"}, "key2": "value2"}
+{"maxGenerations": 400,
+  "sizeOfPopulation": 40,
+  "allowAutocatalysis": "False",
+  "massConserved": "False",
+  "toZip": "True",
+  "numSpecies": 10,
+  "numReactions": 14,
+  "rateConstantScale": 50,
+  "probabilityMutateRateConstant": 0.7,
+  "initialConditions": [1, 5, 9, 3, 10, 3, 7, 1, 6, 3, 10, 11, 4, 6, 2, 7, 1,9, 5, 7, 2, 4, 5, 10, 4, 1, 6, 7, 3, 2, 7, 8],
+  "percentageCloned": 0.1,
+  "percentageChangeInParameter": 0.15,
+  "seed": -1,
+  "threshold": 10.5,
+  "frequencyOfOutput": 10}
