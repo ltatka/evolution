@@ -5,7 +5,7 @@ Created on Fri Apr 30 15:55:44 2021
 @author: hsauro
 """
 
-from commonTypes import TModel_
+from uModel import TModel_
 import teUtils as tu
 from uModel import TModel
 from uModel import TReaction

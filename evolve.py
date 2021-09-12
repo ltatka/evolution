@@ -5,10 +5,7 @@ Created on Tue Apr 27 20:52:33 2021
 @author: hsauro
 """
 
-# Wierd issue with macos: https://github.com/ray-project/ray/issues/5250
-# importing numba after some other packages causes bug. So we move the numba import
-# to top of the execution stack and hope the problem goes away.
-#   https://github.com/numba/numba/issues/4256
+
 from numba import jit
 
 import tellurium as te
@@ -19,7 +16,7 @@ import random
 import matplotlib.pyplot as plt
 import readObjData
 import evalFitness
-from commonTypes import TModel_
+from uModel import TModel_
 import copy, sys, os, math, getopt, json, time, zipfile
 import evolUtils, uModel
 from uModel import TReaction
@@ -31,19 +28,6 @@ from datetime import datetime
 from uLoadCvode import TCvode
 import uLoadCvode
 
-# # Expected Output
-# timeStart 0.0
-# timeEnd 1.25
-# numberOfPoints 9
-# 5
-# 30.0
-# 5
-# 30.0
-# 5
-# 30.0
-# 5
-# 30.0
-# 5
 
 nDeleteReactions = 0
 nAddReaction = 0
