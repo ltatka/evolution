@@ -6,14 +6,14 @@ Created on Fri Apr 30 15:55:44 2021
 """
 
 from uModel import TModel_
-import teUtils as tu
+
 from uModel import TModel
 from uModel import TReaction
 from numba import jit
 
 import tellurium as te
 import roadrunner
-import teUtils as tu
+import modTeUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -27,33 +27,9 @@ from pprint import pprint
 from datetime import date
 from datetime import datetime
 # import keyboard
-import configLoader
+from configLoader import loadConfiguration
 from uLoadCvode import TCvode
 import uLoadCvode
-
-nDeleteReactions = 0
-nAddReaction = 0
-nParameterChanges = 0
-timetaken = 0
-
-savedPopulations = []
-
-currentConfig = configLoader.loadConfiguration()
-
-initialConditions = currentConfig["initialConditions"]
-
-
-
-def makeTracker():
-    tracker = {"fitnessArray": [],
-                "savedPopulations": [],
-                "startTime": time.time(),
-                "nAddReaction": 0,
-                "nDeleteReactions": 0,
-                "nParameterChanges": 0,
-                "timetaken": 0}
-    return tracker
-
 
 def readObjectiveFunction():
     result = readObjData.ObjectiveFunctionData()
@@ -76,26 +52,98 @@ def readObjectiveFunction():
     f.close()
     return result
 
+
+
+
+class PostInitCaller(type):
+    def __call__(cls, *args, **kwargs):
+        obj = type.__call__(cls, *args, **kwargs)
+        obj.post_init()
+        return obj
+
+class Evolver(object, metaclass=PostInitCaller):
+
+
+    def __init__(self, configuration=None, probabilities = None):
+        # If no configuration is given, load the default
+        if not configuration:
+            self.currentConfig = loadConfiguration()
+        else:
+            self.currentConfig = loadConfiguration(configFile=configuration)
+        self.builder = tu # Evolver's instance of teUtils for preserving settings
+        self.objectiveData = readObjectiveFunction()
+        self.makeTracker()
+        self.setReactionProbabilities([0.1, 0.4, 0.4, 0.1])  # Set default reaction probabilites
+
+    def post_init(self):
+        self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
+        self.remainder = self.currentConfig["sizeOfPopulation"] - \
+                         math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
+        self.seed = self.currentConfig['seed']
+        if self.seed == -1:
+            self.seed = random.randrange(sys.maxsize)
+        random.seed(self.seed)
+        if self.currentConfig["massConserved"] == "True":
+            self.builder.Settings.allowMassViolatingReactions = False
+        else:
+            self.builder.Settings.allowMassViolatingReactions = True
+        if self.currentConfig["allowAutocatalysis"] == "True":
+            self.autocatalysis = True
+        else:
+            self.autocatalysis = False
+        self.builder.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
+
+    def setRandomSeed(self, seed):
+        self.seed = seed
+        random.seed(seed)
+
+    def loadNewConfig(self, configFile):
+        self.currentConfig = loadConfiguration(configFile=configFile)
+        self.fitnessEvaluator = evalFitness.FitnessEvaluator(configFile=configFile)
+
+    def setMaxGeneration(self, maxNumber):
+        self.currentConfig["maxGenerations"] = maxNumber
+
+    def setReactionProbabilities(self, probabilityList):
+        if sum(probabilityList) != 1.0:
+            raise ValueError('Probabilities do not add up to 1!')
+        self.builder.Settings.ReactionProbabilities.UniUni = probabilityList[0]
+        self.builder.Settings.ReactionProbabilities.UniBi = probabilityList[1]
+        self.builder.Settings.ReactionProbabilities.BiUni = probabilityList[2]
+        self.builder.Settings.ReactionProbabilities.BiBI = probabilityList[3]
+
+    def makeTracker(self):
+        self.tracker = {"fitnessArray": [],
+                    "savedPopulations": [],
+                    "startTime": time.time(),
+                    "nAddReactions": 0,
+                    "nDeleteReactions": 0,
+                    "nParameterChanges": 0,
+                    "timetaken": 0}
+
+
+ev = Evolver()
+
+
 def addReaction(model):
-    global nAddReaction
-    nAddReaction += 1
+    ev.tracker["nAddReactions"] += 1
     floats = range(0, model.numFloats)  # numFloats = number of floating species
     rt = random.randint(0, 3)  # Reaction type
     reaction = TReaction()
     reaction.reactionType = rt
-    if rt == tu.buildNetworks.TReactionType.UNIUNI:
+    if rt == tu.TReactionType.UniUni:
         r1 = [random.choice(floats)]
         p1 = [random.choice(floats)]
         reaction.reactant1 = r1[0]
         reaction.product1 = p1[0]
 
-    if rt == tu.buildNetworks.TReactionType.BIUNI:
+    if rt == tu.TReactionType.BiUni:
         r1 = [random.choice(floats), random.choice(floats)]
         p1 = [random.choice(floats)]
         reaction.reactant1 = r1[0]
         reaction.reactant2 = r1[1]
         reaction.product1 = p1[0]
-    if currentConfig["massConserved"] == True:
+    if ev.currentConfig["massConserved"] == True:
         count = 0
         while reaction.product1 == reaction.reactant1 or reaction.product1 == reaction.reactant2:
             p1 = [random.choice(floats)]
@@ -104,13 +152,13 @@ def addReaction(model):
             if count > 50:  # quit trying after 50 attempts
                 return model
 
-    if rt == tu.buildNetworks.TReactionType.UNIBI:
+    if rt == tu.TReactionType.UniBi:
         r1 = [random.choice(floats)]
         p1 = [random.choice(floats), random.choice(floats)]
         reaction.reactant1 = r1[0]
         reaction.product1 = p1[0]
         reaction.product2 = p1[1]
-    if currentConfig["massConserved"] == True:
+    if ev.currentConfig["massConserved"] == True:
         count += 1
         while reaction.reactant1 == reaction.product1 or reaction.reactant1 == reaction.product2:
             r1 = [random.choice(floats)]
@@ -119,7 +167,7 @@ def addReaction(model):
             if count > 50:  # quit trying after 50 attempts
                 return model
 
-    if rt == tu.buildNetworks.TReactionType.BIBI:
+    if rt == tu.TReactionType.BiBi:
         r1 = [random.choice(floats), random.choice(floats)]
         p1 = [random.choice(floats), random.choice(floats)]
         reaction.reactant1 = r1[0]
@@ -127,14 +175,13 @@ def addReaction(model):
         reaction.product1 = p1[0]
         reaction.product2 = p1[1]
 
-    reaction.rateConstant = random.random() * currentConfig['rateConstantScale']
+    reaction.rateConstant = random.random() * ev.currentConfig['rateConstantScale']
     model.reactions.append(reaction)
     return model
 
 
 def deleteReaction(model):
-    global nDeleteReactions
-    nDeleteReactions += 1
+    ev.tracker["nDeleteReactions"] += 1
     nReactions = len(model.reactions)
     if nReactions > 2:
         n = random.randint(1, nReactions - 1)
@@ -150,13 +197,12 @@ def mutateReaction(model):
 
 
 def mutateRateConstant(model):
-    global nParameterChanges
-    nParameterChanges += 1
+    ev.tracker["nParameterChanges"] += 1
     # pick a random reaction
     nReactions = len(model.reactions)
     nth = random.randint(0, nReactions - 1)  # pick a reaction
     rateConstant = model.reactions[nth].rateConstant
-    x = currentConfig['percentageChangeInParameter'] * rateConstant
+    x = ev.currentConfig['percentageChangeInParameter'] * rateConstant
 
     change = random.uniform(-x, x)
     return nth, change
@@ -195,14 +241,14 @@ def refactorMmodel(model):
 
 
 def makeModel(nSpecies, nReactions):
-    model = tu.buildNetworks.getRandomNetworkDataStructure(nSpecies, nReactions)
+    model = tu.getRandomNetworkDataStructure(nSpecies, nReactions)
     nFloats = len(model[0])
     nBoundary = len(model[1])
     model.insert(0, nFloats)
     model.insert(1, nBoundary)
     # Append boundary to float list
     model[2] = list(np.append(model[2], model[3]))
-    model.insert(4, initialConditions[:nFloats + nBoundary])
+    model.insert(4, ev.currentConfig["initialConditions"][:nFloats + nBoundary])
     model.append(0.0)  # Append fitness variable
 
     # model = refactor(model)
@@ -216,11 +262,11 @@ def makeModel(nSpecies, nReactions):
         reaction.reactionType = r[0]
 
         reaction.reactant1 = r[1][0]
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BIUNI or reaction.reactionType == tu.buildNetworks.TReactionType.BIBI:
+        if reaction.reactionType == tu.TReactionType.BiUni or reaction.reactionType == tu.TReactionType.BiBi:
             reaction.reactant2 = r[1][1]
 
         reaction.product1 = r[2][0]
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UNIBI or reaction.reactionType == tu.buildNetworks.TReactionType.BIBI:
+        if reaction.reactionType == tu.TReactionType.UniBi or reaction.reactionType == tu.TReactionType.BiBi:
             reaction.product2 = r[2][1]
 
         reaction.rateConstant = r[3]
@@ -242,46 +288,46 @@ def clonePopulation(population):
 
 def savePopulation(gen, population):
     p = clonePopulation(population)
-    savedPopulations.append(p)
+    ev.tracker["savedPopulations"].append(p)
 
 
-def saveRun(seed, saveFileName):
-    global timetaken
-    zf = zipfile.ZipFile(saveFileName, mode="w", compression=zipfile.ZIP_DEFLATED)
-    try:
-        json_string = json.dumps(fitnessArray)
-        zf.writestr("fitnessList.txt", json_string)
-
-        astr = evolUtils.convertToAntimony2(newPopulation[0]);
-        zf.writestr("best_antimony.ant", astr)
-        zf.writestr("seed_" + str(seed) + ".txt", str(seed))
-
-        zf.writestr("config.txt", json.dumps(currentConfig) + '\n')
-
-        today = date.today()
-        now = datetime.now()
-        summaryStr = 'Date:' + today.strftime("%b-%d-%Y") + '\n'
-        summaryStr += 'Time:' + now.strftime("%H:%M:%S") + '\n'
-        summaryStr += 'Time taken in seconds:' + str(math.trunc(timetaken * 100) / 100) + "\n"
-        summaryStr += 'Time taken (hrs:min:sec):' + str(time.strftime("%H:%M:%S", time.gmtime(timetaken))) + "\n"
-        summaryStr += '#Seed=' + str(seed) + '\n'
-        summaryStr += '#Final_number_of_generations=' + str(len(savedPopulations)) + '\n'
-        summaryStr += '#Size_of_population=' + str(sizeOfPopulation) + '\n'
-        summaryStr += '#Number_of_added_reactions=' + str(nAddReaction) + '\n'
-        summaryStr += '#Number_of_deleted_reactions=' + str(nDeleteReactions) + '\n'
-        summaryStr += '#Number_of_parameter_changes=' + str(nParameterChanges) + '\n'
-        summaryStr += '#Final_fitness=' + str(newPopulation[0].fitness) + '\n'
-        zf.writestr('summary.txt', summaryStr)
-
-        for index, pop in enumerate(savedPopulations):
-            for j in range(len(pop)):
-                fileName = "populations/generation_" + str(index) + '/individual_' + str(j) + '.txt'
-                popSummary = '# Fitness = ' + str(pop[j].fitness) + '\n'
-                popSummary += evolUtils.convertToAntimony2(pop[j]);
-                zf.writestr(fileName, popSummary)
-    finally:
-        zf.close()
-    pass
+# def saveRun(seed, saveFileName):
+#     global timetaken
+#     zf = zipfile.ZipFile(saveFileName, mode="w", compression=zipfile.ZIP_DEFLATED)
+#     try:
+#         json_string = json.dumps(ev.tracker["fitnessArray"])
+#         zf.writestr("fitnessList.txt", json_string)
+#
+#         astr = evolUtils.convertToAntimony2(newPopulation[0]);
+#         zf.writestr("best_antimony.ant", astr)
+#         zf.writestr("seed_" + str(seed) + ".txt", str(seed))
+#
+#         zf.writestr("config.txt", json.dumps(ev.currentConfig) + '\n')
+#
+#         today = date.today()
+#         now = datetime.now()
+#         summaryStr = 'Date:' + today.strftime("%b-%d-%Y") + '\n'
+#         summaryStr += 'Time:' + now.strftime("%H:%M:%S") + '\n'
+#         summaryStr += 'Time taken in seconds:' + str(math.trunc(timetaken * 100) / 100) + "\n"
+#         summaryStr += 'Time taken (hrs:min:sec):' + str(time.strftime("%H:%M:%S", time.gmtime(timetaken))) + "\n"
+#         summaryStr += '#Seed=' + str(seed) + '\n'
+#         summaryStr += '#Final_number_of_generations=' + str(len(savedPopulations)) + '\n'
+#         summaryStr += '#Size_of_population=' + str(sizeOfPopulation) + '\n'
+#         summaryStr += '#Number_of_added_reactions=' + str(nAddReaction) + '\n'
+#         summaryStr += '#Number_of_deleted_reactions=' + str(nDeleteReactions) + '\n'
+#         summaryStr += '#Number_of_parameter_changes=' + str(nParameterChanges) + '\n'
+#         summaryStr += '#Final_fitness=' + str(newPopulation[0].fitness) + '\n'
+#         zf.writestr('summary.txt', summaryStr)
+#
+#         for index, pop in enumerate(savedPopulations):
+#             for j in range(len(pop)):
+#                 fileName = "populations/generation_" + str(index) + '/individual_' + str(j) + '.txt'
+#                 popSummary = '# Fitness = ' + str(pop[j].fitness) + '\n'
+#                 popSummary += evolUtils.convertToAntimony2(pop[j]);
+#                 zf.writestr(fileName, popSummary)
+#     finally:
+#         zf.close()
+#     pass
 
 
 def plotFitnessPopulationHist(population):

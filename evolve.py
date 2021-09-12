@@ -219,7 +219,7 @@ if __name__ == "__main__":
         if defaultConfig["toZip"]:
             saveFileName = "Model_" + str(seed) + ".zip"
             print("Saving entire state to --- ", saveFileName)
-            evolUtils.saveRun(seed, saveFileName)
+            # evolUtils.saveRun(seed, saveFileName)
         else:
             saveFileName = "Model_" + str(seed) + ".ant"
             print("Saving entire state to --- ", saveFileName)
@@ -233,7 +233,7 @@ if __name__ == "__main__":
             print("Trial failed.....")
             saveFileName = "FAIL_Model_" + str(seed) + ".zip"
             print("Saving entire state to --- ", saveFileName)
-            evolUtils.saveRun(seed, saveFileName)
+            # evolUtils.saveRun(seed, saveFileName)
         else:
             print("Trial failed.....")
             saveFileName = "FAIL_Model_" + str(seed) + ".ant"
@@ -251,9 +251,9 @@ if __name__ == "__main__":
     print("Time taken in seconds = ", math.trunc(timetaken * 100) / 100)
     print("Time taken (hrs:min:sec): ", time.strftime("%H:%M:%S", time.gmtime(timetaken)))
     print("Seed = ", seed)
-    print('Number of added reactions = ', nAddReaction)
-    print('Number of deleted reactions = ', nDeleteReactions)
-    print('Number of parameter changes = ', nParameterChanges)
+    print('Number of added reactions = ', evolUtils.ev.tracker["nAddReactions"])
+    print('Number of deleted reactions = ', evolUtils.ev.tracker["nDeleteReactions"])
+    print('Number of parameter changes = ', evolUtils.ev.tracker["nParameterChanges"])
     # if newPopulation[0].fitness < 100:
     #    astr = evolUtils.convertToAntimony2 (newPopulation[0]);
     #    print (astr)
