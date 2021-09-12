@@ -31,6 +31,8 @@ from configLoader import loadConfiguration
 from uLoadCvode import TCvode
 import uLoadCvode
 
+
+
 def readObjectiveFunction():
     result = readObjData.ObjectiveFunctionData()
     f = open("objectivefunction.txt", "r")
@@ -64,7 +66,7 @@ class PostInitCaller(type):
 class Evolver(object, metaclass=PostInitCaller):
 
 
-    def __init__(self, configuration=None, probabilities = None):
+    def __init__(self, configuration=None, probabilities=None):
         # If no configuration is given, load the default
         if not configuration:
             self.currentConfig = loadConfiguration()
@@ -114,16 +116,15 @@ class Evolver(object, metaclass=PostInitCaller):
 
     def makeTracker(self):
         self.tracker = {"fitnessArray": [],
-                    "savedPopulations": [],
-                    "startTime": time.time(),
-                    "nAddReactions": 0,
-                    "nDeleteReactions": 0,
-                    "nParameterChanges": 0,
-                    "timetaken": 0}
+                        "savedPopulations": [],
+                        "startTime": time.time(),
+                        "nAddReactions": 0,
+                        "nDeleteReactions": 0,
+                        "nParameterChanges": 0,
+                        "timetaken": 0}
 
 
 ev = Evolver()
-
 
 def addReaction(model):
     ev.tracker["nAddReactions"] += 1
