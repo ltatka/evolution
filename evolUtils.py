@@ -374,11 +374,6 @@ def displayFitness(population):
         print(p.fitness)
 
 
-def test(tag):
-    if gen == 7:
-        evalFitness.computeFitnessOfIndividual(newPopulation[0], objectiveData)
-        print("fitness at 7 (tag) = ", tag, newPopulation[0].fitness)
-
 
 def printModel(model):
     print("Model details:")
@@ -396,56 +391,6 @@ def writeOutConfigForModel(f, config):
 def pause():
     programPause = input("Press the <ENTER> key to continue...")
 
-def convertToAntimony (model):
-    nFloats = model[TModel_.nFloats]
-    nBoundary = model[TModel_.nBoundary]
-    boundaryList = model[TModel_.boundaryList]
-    fullList = model[TModel_.fullSpeciesList]
-    reactions = model[TModel_.reactionList]
-    nReactions = model[TModel_.reactionList][0]
-    astr = ''
-    for f in fullList[:nFloats]:
-        astr += 'var S' + str(f) + '\n'
-        
-    for b in boundaryList:
-        astr += 'ext S' + str(b) + '\n'  
-        
-    for i in range (nReactions):
-        reaction = reactions[i+1]
-        if reaction[0] == tu.buildNetworks.TReactionType.UNIUNI:
-           S1 = 'S' + str (reaction[1][0])
-           S2 = 'S' + str (reaction[2][0])
-           astr += S1 + ' -> ' + S2
-           astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BIUNI:
-           S1 = 'S' + str (reaction[1][0])
-           S2 = 'S' + str (reaction[1][1])
-           S3 = 'S' + str (reaction[2][0])
-           astr += S1 + ' + ' + S2 + ' -> ' + S3
-           astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.UNIBI:
-           S1 = 'S' + str (reaction[1][0])
-           S2 = 'S' + str (reaction[2][0])
-           S3 = 'S' + str (reaction[2][1])
-           astr += S1 + ' -> ' + S2 + '+' + S3
-           astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.buildNetworks.TReactionType.BIBI:
-           S1 = 'S' + str (reaction[1][0])
-           S2 = 'S' + str (reaction[1][1])
-           S3 = 'S' + str (reaction[2][0])
-           S4 = 'S' + str (reaction[2][1])
-           astr += S1 + ' + ' + S2 + ' -> ' + S3 + ' + ' + S4
-           astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-           
-    for i in range (nReactions):
-        reaction = reactions[i+1]
-        astr += 'k' + str (i) + ' = ' + str (reaction[3]) + '\n'
-    initCond = model[TModel_.initialCond]
-    for i in range (nFloats+nBoundary):
-        astr += 'S' + str(fullList[i]) + ' = ' + str (initCond[i]) + '\n'
-    
-    return astr
-
 def convertToAntimony2 (model):
     nFloats = model.numFloats
     nBoundary = model.numBoundary
@@ -460,24 +405,24 @@ def convertToAntimony2 (model):
         
     for i in range (nReactions):
         reaction = reactions[i]
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UNIUNI:
+        if reaction.reactionType == tu.TReactionType.UniUni:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.product1)
            astr += S1 + ' -> ' + S2
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BIUNI:
+        if reaction.reactionType == tu.TReactionType.BiUni:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.reactant2)
            S3 = 'S' + str (reaction.product1)
            astr += S1 + ' + ' + S2 + ' -> ' + S3
            astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.UNIBI:
+        if reaction.reactionType == tu.TReactionType.UniBi:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.product1)
            S3 = 'S' + str (reaction.product2)
            astr += S1 + ' -> ' + S2 + '+' + S3
            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction.reactionType == tu.buildNetworks.TReactionType.BIBI:
+        if reaction.reactionType == tu.TReactionType.BiBi:
            S1 = 'S' + str (reaction.reactant1)
            S2 = 'S' + str (reaction.reactant2)
            S3 = 'S' + str (reaction.product1)
