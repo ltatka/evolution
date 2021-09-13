@@ -31,6 +31,7 @@ import uLoadCvode
 
 
 
+
 tu.buildNetworks.Settings.ReactionProbabilities.UniUi = 0.1
 tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
 tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
