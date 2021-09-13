@@ -32,6 +32,27 @@ from uLoadCvode import TCvode
 import uLoadCvode
 
 
+def readObjectiveFunction():
+    result = readObjData.ObjectiveFunctionData()
+    f = open("objectivefunction.txt", "r")
+    astr = f.readline()  # Dump the first comment line
+    astr = f.readline()
+    aList = astr.split()
+    result.timeStart = float(aList[1])
+
+    astr = f.readline();
+    aList = astr.split();
+    result.timeEnd = float(aList[1])
+
+    astr = f.readline()
+    aList = astr.split()
+    result.numberOfPoints = int(aList[1])
+
+    for i in range(result.numberOfPoints):
+        result.outputData.append(float(f.readline()))
+    f.close()
+    return result
+
 
 class PostInitCaller(type):
     def __call__(cls, *args, **kwargs):
@@ -146,26 +167,7 @@ ev = EvolveSettings()
 #    FUNCTIONS FOR EVOLVING INDIVIDUALS
 #_________________________________________________________________________________
 
-def readObjectiveFunction():
-    result = readObjData.ObjectiveFunctionData()
-    f = open("objectivefunction.txt", "r")
-    astr = f.readline()  # Dump the first comment line
-    astr = f.readline()
-    aList = astr.split()
-    result.timeStart = float(aList[1])
 
-    astr = f.readline();
-    aList = astr.split();
-    result.timeEnd = float(aList[1])
-
-    astr = f.readline()
-    aList = astr.split()
-    result.numberOfPoints = int(aList[1])
-
-    for i in range(result.numberOfPoints):
-        result.outputData.append(float(f.readline()))
-    f.close()
-    return result
 
 
 
@@ -343,7 +345,7 @@ def clonePopulation(population):
 
 
 def getNextGen(population):
-    computeFitness(population)
+    computeFitness(population, ev.objectiveData)
     # Sort the population according to fitness
     population.sort(key=lambda x: x.fitness)
     newPopulation = []
