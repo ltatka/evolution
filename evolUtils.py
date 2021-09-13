@@ -123,49 +123,7 @@ class Evolver(object, metaclass=PostInitCaller):
                         "nDeleteReactions": 0,
                         "nParameterChanges": 0,
                         "timetaken": 0}
-    # OLD VERSION
-    def addReaction(self, model):
-        # global nAddReaction
-        # nAddReaction += 1
-        nSpecies = self.currentConfig["numSpecies"]
-        floats = range(0, model.numFloats)
-        rt = random.randint(0, 3)  # Reaction type
-        reaction = TReaction()
-        reaction.reactionType = rt
-        if rt == tu.TReactionType.UniUni:
-            r1 = [random.choice(floats)]
-            p1 = [random.choice(floats)]
-            # Disallow S1 -> S1 type of reaction
-            # while p1[0] == r1[0]:
-            #     p1 = [random.randint(0, nSpecies - 1)]
-            reaction.reactant1 = r1[0]
-            reaction.product1 = p1[0]
 
-        elif rt == tu.TReactionType.BiUni:
-            r1 = [random.choice(floats), random.choice(floats)]
-            p1 = [random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.reactant2 = r1[1]
-            reaction.product1 = p1[0]
-
-        elif rt == tu.TReactionType.UniBi:
-            r1 = [random.choice(floats)]
-            p1 = [random.choice(floats), random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.product1 = p1[0]
-            reaction.product2 = p1[1]
-
-        elif rt == tu.TReactionType.BiBi:
-            r1 = [random.choice(floats), random.choice(floats)]
-            p1 = [random.choice(floats), random.choice(floats)]
-            reaction.reactant1 = r1[0]
-            reaction.reactant2 = r1[1]
-            reaction.product1 = p1[0]
-            reaction.product2 = p1[1]
-
-        reaction.rateConstant = random.random() * self.currentConfig['rateConstantScale']
-        model.reactions.append(reaction)
-        return model
 
 ev = Evolver()
 
@@ -258,6 +216,47 @@ ev = Evolver()
 #         model.reactions.append(reaction)
 #         return model
 
+# OLD VERSION
+def addReaction(model):
+    ev.tracker["nAddReactions"] += 1
+    floats = range(0, model.numFloats)
+    rt = random.randint(0, 3)  # Reaction type
+    reaction = TReaction()
+    reaction.reactionType = rt
+    if rt == tu.TReactionType.UniUni:
+        r1 = [random.choice(floats)]
+        p1 = [random.choice(floats)]
+        # Disallow S1 -> S1 type of reaction
+        # while p1[0] == r1[0]:
+        #     p1 = [random.randint(0, nSpecies - 1)]
+        reaction.reactant1 = r1[0]
+        reaction.product1 = p1[0]
+
+    elif rt == tu.TReactionType.BiUni:
+        r1 = [random.choice(floats), random.choice(floats)]
+        p1 = [random.choice(floats)]
+        reaction.reactant1 = r1[0]
+        reaction.reactant2 = r1[1]
+        reaction.product1 = p1[0]
+
+    elif rt == tu.TReactionType.UniBi:
+        r1 = [random.choice(floats)]
+        p1 = [random.choice(floats), random.choice(floats)]
+        reaction.reactant1 = r1[0]
+        reaction.product1 = p1[0]
+        reaction.product2 = p1[1]
+
+    elif rt == tu.TReactionType.BiBi:
+        r1 = [random.choice(floats), random.choice(floats)]
+        p1 = [random.choice(floats), random.choice(floats)]
+        reaction.reactant1 = r1[0]
+        reaction.reactant2 = r1[1]
+        reaction.product1 = p1[0]
+        reaction.product2 = p1[1]
+
+    reaction.rateConstant = random.random() * ev.currentConfig['rateConstantScale']
+    model.reactions.append(reaction)
+    return model
 
 
 def deleteReaction(model):
@@ -273,7 +272,7 @@ def mutateReaction(model):
     if random.random() > 0.5:
         deleteReaction(model)
     else:
-        ev.addReaction(model)
+        addReaction(model)
 
 
 def mutateRateConstant(model):
