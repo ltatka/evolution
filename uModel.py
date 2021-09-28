@@ -78,6 +78,7 @@ class TModel:
       self.reactions = []
       self.fitness = 0
       self.cvode = 0
+      self.ID = ''
 
 def clone (model):
     amodel = TModel()
@@ -87,6 +88,7 @@ def clone (model):
     amodel.initialConditions = copy.deepcopy (model.initialConditions)
     amodel.reactions = []
     amodel.cvode = model.cvode
+    amodel.ID = model.ID
     for oldrxn in model.reactions:
         newrxn = TReaction()
         

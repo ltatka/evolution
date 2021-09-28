@@ -335,7 +335,7 @@ def savePopulation(gen, population):
     savedPopulations.append(p)
 
 
-def saveRun(seed, saveFileName):
+def saveRun(seed, saveFileName, id_list):
     global timetaken
     zf = zipfile.ZipFile(saveFileName, mode="w", compression=zipfile.ZIP_DEFLATED)
     try:
@@ -347,6 +347,8 @@ def saveRun(seed, saveFileName):
         zf.writestr("seed_" + str(seed) + ".txt", str(seed))
 
         zf.writestr("config.txt", json.dumps(currentConfig) + '\n')
+
+        zf.writestr("ID_list.txt", id_list)
 
         today = date.today()
         now = datetime.now()
@@ -458,9 +460,9 @@ if __name__ == "__main__":
     #           "multi": {"item 1": "item 2"},
     #           "key2": "value2"}
 
-    defaultConfig = {"maxGenerations": 450,
-                     "massConserved": True,
-                     "toZip": False,
+    defaultConfig = {"maxGenerations": 10,
+                     "massConserved": False,
+                     "toZip": True,
                      "sizeOfPopulation": 40,
                      "numSpecies": 3,
                      "numReactions": 9,
@@ -545,6 +547,12 @@ if __name__ == "__main__":
     model = population[0]
     topElite = math.trunc(defaultConfig['percentageCloned'] * sizeOfPopulation)
 
+    population.sort(key=lambda x: x.fitness)
+    for i, model in enumerate(population):
+        model.ID = str(i)
+        print(model.ID)
+
+
     # Main loop
     fitnessArray = []
     savedPopulations = []
@@ -555,6 +563,12 @@ if __name__ == "__main__":
 
         # Sort the population according to fitness
         population.sort(key=lambda x: x.fitness)
+
+        # update model IDs
+        print(f'generation {gen} model IDs')
+        for i, model in enumerate(population):
+            model.ID += "." + str(i)
+            print(model.ID)
 
         # Create the next population
         newPopulation = []
@@ -616,9 +630,12 @@ if __name__ == "__main__":
         print("Success.......")
 
         if defaultConfig["toZip"]:
+            id_list = ''
+            for model in newPopulation:
+                id_list += model.ID + "\n"
             saveFileName = "Model_" + str(seed) + ".zip"
             print("Saving entire state to --- ", saveFileName)
-            saveRun(seed, saveFileName)
+            saveRun(seed, saveFileName, id_list)
         else:
             saveFileName = "Model_" + str(seed) + ".ant"
             print("Saving entire state to --- ", saveFileName)
@@ -629,10 +646,13 @@ if __name__ == "__main__":
     else:
 
         if defaultConfig["toZip"]:
+            id_list = ''
+            for model in newPopulation:
+                id_list += model.ID + "\n"
             print("Trial failed.....")
             saveFileName = "FAIL_Model_" + str(seed) + ".zip"
             print("Saving entire state to --- ", saveFileName)
-            saveRun(seed, saveFileName)
+            saveRun(seed, saveFileName, id_list)
         else:
             print("Trial failed.....")
             saveFileName = "FAIL_Model_" + str(seed) + ".ant"
