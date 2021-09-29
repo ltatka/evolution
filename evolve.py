@@ -463,7 +463,7 @@ if __name__ == "__main__":
     defaultConfig = {"maxGenerations": 10,
                      "massConserved": False,
                      "toZip": True,
-                     "sizeOfPopulation": 40,
+                     "sizeOfPopulation": 200,
                      "numSpecies": 3,
                      "numReactions": 9,
                      "rateConstantScale": 50,
@@ -592,11 +592,12 @@ if __name__ == "__main__":
         # individuals, picking the best and mutating it.
         remainder = sizeOfPopulation - topElite
 
+
         for i in range(remainder):
 
             # pick two models at random, then pick the best and mutate it
-            r1 = random.randint(1, sizeOfPopulation - 1)
-            r2 = random.randint(1, sizeOfPopulation - 1)
+            candidates = list(range(sizeOfPopulation))
+            r1, r2 = random.choices(candidates, k=2)
 
             if population[r1].fitness < population[r2].fitness:
                 if random.random() > currentConfig['probabilityMutateRateConstant']:
