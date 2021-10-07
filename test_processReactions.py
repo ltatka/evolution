@@ -69,19 +69,46 @@ S2 = 9.0'''
         self.assertEqual(self.model.rateConstants, trueRateConstants)
         self.assertTrue(len(self.model.reactions) == len(self.model.rateConstants))
 
+    def test_isEqual(self):
+        r1 = pp.Reaction(['S0', 'S1'], ['S2'], 1.4)
+        r2 = pp.Reaction(['S1', 'S0'], ['S2'], 2.5)
+        self.assertTrue(r1.isEqual(r2))
+        r3 = pp.Reaction(['S1', 'S1'], ['S3'], 2.6)
+        r4 = pp.Reaction(['S1', 'S1'], ['S5'], 1.9)
+        self.assertFalse(r3.isEqual(r4))
+        r5 = pp.Reaction(['S1', 'S3'], ['S2', 'S4'], 2.6)
+        r6 = pp.Reaction(['S3', 'S1'], ['S4', 'S2'], 2.6)
+        self.assertTrue(r5.isEqual(r6))
+
     def test_makeRxnSet(self):
-        trueDict= {(frozenset({'S2'}), frozenset({'S0'})): 19.145816395561692,
-                    (frozenset({'S0'}), frozenset({'S0', 'S1'})): 90.0673521833738,
-                    (frozenset({'S1'}), frozenset({'S0', 'S1'})): 48.74495658865024,
-                    (frozenset({'S1'}), frozenset({'S0', 'S2'})): 4.7667514994980555,
-                    (frozenset({'S2', 'S1'}), frozenset({'S2'})): 15.50936673547638,
-                    (frozenset({'S2'}), frozenset({'S1'})): 8.171034267002623,
-                    (frozenset({'S1'}), frozenset({'S0'})): 7.202857436875558,
-                    (frozenset({'S0', 'S2'}), frozenset({'S2', 'S1'})): 13.147047088765943}
+        trueDict = {'S2 -> S0': 11.830987147018757,
+                    'S0 -> S1 + S0': 5.400180372157445,
+                    'S1 -> S0 + S1': 41.54190920864631,
+                    'S1 -> S0 + S2': 4.7667514994980555,
+                    'S2 + S1 -> S2': 15.50936673547638,
+                    'S2 -> S1 + S1': 8.171034267002623,
+                    'S2 -> S2 + S2': 15.252690388653708,
+                    'S1 -> S0': 7.202857436875558,
+                    'S2 + S0 -> S1 + S2': 13.147047088765943,
+                    'S1 + S1 -> S0 + S1': 7.20304738000393,
+                    'S0 -> S0 + S1': 48.71489357141781}
         trueCombinedRxns = ['S2->S0;k4*S2',
                              'S0->S1+S0;k6*S0',
                              'S1+S1->S0+S1;k11*S1*S1',
                              'S0->S0+S1;k12*S0']
-        rxnDict = self.model.makeRxnDict()
-        self.assertEqual(rxnDict, trueDict)
+        self.model.makeRxnDict()
+        readDict = self.model.getReadableRxnDict()
+        self.assertEqual(readDict, trueDict)
         self.assertEqual(self.model.combinedReactions, trueCombinedRxns)
+
+    # def test_processRxnDict(self):
+    #     trueReactions = ['S2->S0; k0*S2',
+    #                      'S0->S1+S0; k1*S0',
+    #                      'S1->S1+S0; k2*S1',
+    #                      'S1->S2+S0; k3*S1',
+    #                      'S1+S2->S2; k4*S1*S2',
+    #                      'S2->S1; k5*S2',
+    #                      'S1->S0; k6*S1',
+    #                      'S2+S0->S1+S2; k7*S2*S0']
+    #     reactions, rateconstants = self.model.processRxnDict()
+    #     self.assertEqual(reactions, [])

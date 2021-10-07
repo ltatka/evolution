@@ -50,6 +50,7 @@ nAddReaction = 0
 nParameterChanges = 0
 timetaken = 0
 
+
 tu.buildNetworks.Settings.ReactionProbabilities.UniUi = 0.1
 tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
 tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
@@ -190,10 +191,11 @@ def mutateRateConstant(model):
     nReactions = len(model.reactions)
     nth = random.randint(0, nReactions - 1)  # pick a reaction
     rateConstant = model.reactions[nth].rateConstant
-    x = currentConfig['percentageChangeInParameter'] * rateConstant
+    x = 0.25 * rateConstant #currentConfig['percentageChangeInParameter'] * rateConstant
 
     change = random.uniform(-x, x)
     return nth, change
+
 
 
 def computeFitness(population):
@@ -441,6 +443,7 @@ def writeOutConfigForModel(f, config):
 def pause():
     programPause = input("Press the <ENTER> key to continue...")
 
+objectiveData = readObjectiveFunction()
 
 if __name__ == "__main__":
     # ---------------------------------------------------------------------
@@ -460,17 +463,17 @@ if __name__ == "__main__":
     #           "multi": {"item 1": "item 2"},
     #           "key2": "value2"}
 
-    defaultConfig = {"maxGenerations": 10,
+    defaultConfig = {"maxGenerations": 1,
                      "massConserved": False,
                      "toZip": True,
-                     "sizeOfPopulation": 200,
+                     "sizeOfPopulation": 10,
                      "numSpecies": 3,
                      "numReactions": 9,
                      "rateConstantScale": 50,
-                     "probabilityMutateRateConstant": 0.7,  # 0.9 much worse
+                     "probabilityMutateRateConstant": 0.5, #0.7,  # 0.9 much worse
                      "percentageCloned": 0.1,
-                     "percentageChangeInParameter": 0.15,
-                     "seed": -1,  # means no specific seed
+                     "percentageChangeInParameter": 0.40,
+                     "seed": -1,  # -1 means no specific seed
                      "threshold": 10.5,  # a fitness below this we stop
                      "frequencyOfOutput": 10,
                      "multi": {"item 1": "item 2"},
@@ -550,11 +553,12 @@ if __name__ == "__main__":
     population.sort(key=lambda x: x.fitness)
     for i, model in enumerate(population):
         model.ID = str(i)
-        print(model.ID)
+
 
 
     # Main loop
     fitnessArray = []
+    worstFitness = []
     savedPopulations = []
     startTime = time.time()
     for gen in range(0, maxGenerations):
@@ -564,11 +568,34 @@ if __name__ == "__main__":
         # Sort the population according to fitness
         population.sort(key=lambda x: x.fitness)
 
+        modelCounts = {}
+
+        uniqueModels = set()
+
+        print(f"Generation {gen}")
         # update model IDs
-        print(f'generation {gen} model IDs')
+        # currentIDs = []
         for i, model in enumerate(population):
+            duplicate = False
             model.ID += "." + str(i)
+            astr = evolUtils.convertToAntimony2(model)
+            currentIDs.append(model.ID)
+            if astr in uniqueModels:
+                #print(f'{model.ID} is a duplicate')
+                pass
+            else:
+                uniqueModels.add(astr)
+
             print(model.ID)
+            startID = model.ID.split('.')[0]
+            if startID in modelCounts.keys():
+                modelCounts[startID] += 1
+            else:
+                modelCounts[startID] = 1
+
+
+        print(f"Generation {gen}: {len(modelCounts)} seed models present")
+        print(f"{sizeOfPopulation - len(uniqueModels)} identical models present")
 
         # Create the next population
         newPopulation = []
@@ -581,39 +608,42 @@ if __name__ == "__main__":
             print('.', end='', flush=True)
         # Record the best fitness
         fitnessArray.append(population[0].fitness)
+        worstFitness.append(population[-1].fitness)
 
-        # Clone in the best individual from the current population
-        newPopulation.append(uModel.clone(population[0]))
+        # newPopulationIDs = []
         # Copy over the top elite of the popoulation
-        for i in range(topElite - 1):
+        for i in range(topElite):
             newPopulation.append(uModel.clone(population[i]))
+            # newPopulationIDs.append(population[i].ID)
 
         # For the remainder use tournament selction on pairs of
         # individuals, picking the best and mutating it.
         remainder = sizeOfPopulation - topElite
 
-
+        candidates = list(range(sizeOfPopulation))
         for i in range(remainder):
 
             # pick two models at random, then pick the best and mutate it
-            candidates = list(range(sizeOfPopulation))
+
             r1, r2 = random.choices(candidates, k=2)
 
             if population[r1].fitness < population[r2].fitness:
+                amodel = uModel.clone(population[r1])
+                # newPopulationIDs.append(amodel.ID)
                 if random.random() > currentConfig['probabilityMutateRateConstant']:
-                    mutateReaction(population[r1])
+                    mutateReaction(amodel)
                 else:
-                    n, change = mutateRateConstant(population[r1])
-                    amodel = uModel.clone(population[r1])
+                    n, change = mutateRateConstant(amodel)
                     amodel.reactions[n].rateConstant += change
                 newPopulation.append(amodel)
             else:
+                amodel = uModel.clone(population[r2])
+                # newPopulationIDs.append(amodel.ID)
                 if random.random() > currentConfig['probabilityMutateRateConstant']:
-                    mutateReaction(population[r2])
+                    mutateReaction(amodel)
                 else:
-                    n, change = mutateRateConstant(population[r2])
-                    amodel = uModel.clone(population[r2])
-                    amodel.reactions[n].rateConstant += change;
+                    n, change = mutateRateConstant(amodel)
+                    amodel.reactions[n].rateConstant += change
                 newPopulation.append(amodel)
 
             # if keyboard.is_pressed("ctrl+q"):
@@ -631,6 +661,9 @@ if __name__ == "__main__":
         print("Success.......")
 
         if defaultConfig["toZip"]:
+            with open('worstfitness.txt', 'w') as f:
+                f.write(str(worstFitness))
+                f.close()
             id_list = ''
             for model in newPopulation:
                 id_list += model.ID + "\n"
@@ -646,6 +679,9 @@ if __name__ == "__main__":
                 f.close()
     else:
 
+        with open('worstfitness.txt', 'w') as f:
+            f.write(str(worstFitness))
+            f.close()
         if defaultConfig["toZip"]:
             id_list = ''
             for model in newPopulation:

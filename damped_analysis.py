@@ -6,122 +6,80 @@ import math
 import copy
 import zipfile
 
-
-
-parent_dir = "C:\\Users\\tatka\\Desktop\\Models\\TEST"
-
-damp_dir = os.path.join(parent_dir, "Damped")
-pass_dir = os.path.join(parent_dir, "Oscillate")
-pass_inf = os.path.join(pass_dir, "Infinity")
-damp_inf = os.path.join(damp_dir, "Infinity")
-pass_unk = os.path.join(damp_dir, "unknown")
-damp_unk = os.path.join(damp_dir, "unknown")
-#
-#
-
-def checkMakeDir(dir, parent):
-    if not os.path.isdir(dir):
-        os.mkdir(dir)
-        os.chdir(parent)
-
-
-if not os.path.isdir(damp_dir):
-    os.mkdir(damp_dir)
-    os.chdir(parent_dir)
-if not os.path.isdir(pass_dir):
-    os.mkdir(pass_dir)
-    os.chdir(parent_dir)
-if not os.path.isdir(damp_inf):
-    os.mkdir(damp_inf)
-    os.chdir(parent_dir)
-if not os.path.isdir(pass_inf):
-    os.mkdir(pass_inf)
-    os.chdir(parent_dir)
-if not os.path.isdir(damp_unk):
-    os.mkdir(damp_unk)
-    os.chdir(parent_dir)
-if not os.path.isdir(pass_unk):
-    os.mkdir(pass_unk)
-    os.chdir(parent_dir)
+import os
+import numpy as np
+from scipy.signal import find_peaks
+import tellurium as te
+import antUtils
 
 
 
-total_processed = 0
-total_damped = 0
+def check_infinity(result):
+    row, col = np.shape(result)
+    # find max value at end
+    max= 0
+    maxCol = None
+    for i in range(1, col):
+        if result[row-1, i] > max:
+            max = result[row-1, i]
+            maxCol = i
+    # If nothing ever exceeds max, then maxCol never is assigned. That means that concentrations either become
+    # negative, or they huddle around zero (ie -1.23279e-15). Either way, we want to throw out this model,
+    # so we'll return True even though it doesn't technically go to infinity.
+    if not maxCol:
+        return True
+    # Get the average of a few clusters of points on the line and see if
+    # they are increasing
+    pts1 = np.mean([result[round(row/3), maxCol], result[round(row/3)+2, maxCol], result[round(row/3)+4, maxCol]])
+    pts2 = np.mean([result[2*round(row / 3), maxCol], result[2*round(row / 3) + 2, maxCol],
+                   result[2*round(row / 3) + 4, maxCol]])
+    pts3 = np.mean([result[row-5, maxCol], result[row-3, maxCol], result[row-1, maxCol]])
+    if pts1 < pts2 and pts2 < pts3 and pts3 > 2*pts1:
+        return True # Goes to infinity
+    else:
+        return False
 
-os.chdir(parent_dir)
 
-
-count = 0
-total = len(os.listdir(parent_dir))
-for filename in os.listdir(parent_dir):
-    count += 1
-    if count%50 ==0:
-        print(f'working on model {count} of {total}...')
-
-    os.chdir(parent_dir)
-    if not filename.endswith('.ant'):
-        continue
-    ant = clean.loadAntimonyText_noLines(filename)
+# Return True if the model is damped
+def isModelDampled(antstr):
+    r = te.loada(antstr)
     try:
-        isDamped, toInf = clean.isModelDampled(ant)
-        if isDamped:
-            total_damped += 1
-            os.chdir(damp_dir)
-            inf_dir = damp_inf
-            unk_dir = damp_unk
+        m1 = r.simulate(0, 100, 1000)
+        m2 = r.simulate(0, 1000, 5000)
+    except Exception:
+       return True, None
+    _, col = np.shape(m1)
+    goesToInf = check_infinity(m2)
+    #Look at each species:
+    for i in range(1, col):
+        peaks1, _ = find_peaks(m1[:, i], prominence=1)
+        # If there are too few peaks, move on to next species
+        # Otherwise simulate longer to check for damping
+        if len(peaks1) < 4:
+            continue
+        peaks2, _ = find_peaks(m2[1000:, i], prominence=1)
+        if len(peaks2) < 2: #* len(peaks1):
+            continue
         else:
-            os.chdir(pass_dir)
-            inf_dir = pass_inf
-            unk_dir = pass_unk
-        if isDamped and toInf:
-            os.chdir(damp_inf)
-        elif isDamped and toInf == 'unknown':
-            os.chdir(damp_unk)
-        elif isDamped and not toInf:
-            os.chdir(damp_dir)
-        elif not isDamped and toInf:
-            os.chdir(pass_inf)
-        elif not isDamped and toInf == 'unknown':
-            os.chdir(pass_unk)
-        elif not isDamped and not toInf:
-            os.chdir(pass_dir)
+            return False, goesToInf
+    return True, goesToInf
 
 
-        with open(f'{filename}', "w") as f:
-            f.write(ant)
-            f.close()
-            total_processed += 1
 
-    except Exception as e:
-        print(f"Fail: {filename}\n{e}")
-
-
-print(f'Processed {total_processed} models and found {total_damped} damped models.')
-
-#
-# ant = clean.loadAntimonyText_noLines("C:\\Users\\tatka\\Desktop\\Models\\TEST\\osc4.ant")
-
-# r = te.loada(ant)
-# m = r.simulate(0,100,1000)
-# clean.check_infinity(m)
-#
-#
-# damped = clean.isModelDampled(ant)
-# print(f'Is damped: {damped}')
-# #
-# import tellurium as te
-# #
-# r = te.loada(ant)
-# result = r.simulate(0,1000,5000)
-# # r.plot()
-#
-# import pylab
-# pylab.plot (result[4900:,2])
-# pylab.show()
-#
-# from scipy.signal import find_peaks
-# peaks, _ = find_peaks(result[4900:,2], prominence=1)
-# print(f'Peaks found: {len(peaks)}')
-#
-#
+def process_damped(parent_dir, save_dir):
+    antUtils.checkMakeDir(parent_dir)
+    antUtils.checkMakeDir(save_dir)
+    for filename in os.listdir(parent_dir):
+        os.chdir(parent_dir)
+        if not filename.endswith('.ant'):
+            continue
+        ant = antUtils.loadAntimonyText_noLines(filename)
+        try:
+            isDamped, toInf = isModelDampled(ant)
+            if not isDamped and not toInf:
+                os.chdir(save_dir)
+                with open(f'{filename}', "w") as f:
+                    f.write(ant)
+                    f.close()
+        except Exception as e:
+            print(f"Fail: {filename}\n{e}")

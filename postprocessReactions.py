@@ -13,38 +13,8 @@ def joinAntimonyLines(antLines):
     return '\n'.join(antLines)
 
 
-class Reaction:
-    def __init__(self, reactant, product, k):
-        if isinstance(reactant, frozenset) and isinstance(product, frozenset):
-            self.reactant = reactant
-            self.product = product
-        else:
-            self.reactant = frozenset(reactant)
-            self.product = frozenset(product)
-        self.k = k
-
-    def isEqual(self, other):
-        return self.reactant == other.reactant and self.product == other.product
 
 
-# class ReactionDict:
-#     def __init__(self):
-#         self.rxnDict = {}
-#
-#     def add(self, reaction):
-#         self.rxnDict[(reaction.reactant, reaction.product)] = reaction.k
-#
-#     def contains(self, reaction):
-#         return (reaction.reactant, reaction.product) in self.rxnDict
-#
-#     def updateRateConstant(self, reaction):
-#         self.rxnDict[(reaction.reactant, reaction.product)] = self.rxnDict[
-#                                                                   (reaction.reactant, reaction.product)] + reaction.k
-#     def getStrRxnDict(self):
-#         strRxnDict = ''
-#         for item in self.rxnDict.items():
-#             strRxnDict += f'{item[0]}, {item[1]}\n'
-#         return strRxnDict
 
 
 
@@ -104,9 +74,15 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.ant = newAnt
         # self.removeDuplicateRxns()
 
+    def rxnDictContains(self, reaction):
+        for key in self.rxnDict.keys():
+            if self.rxnIsEqual(reaction, key):
+                return True
+        return False
+
     def removeDuplicateRxns(self):
-        # self.makeRxnSet()
-        self.reactions, self.rateConstants = self.processRxnSet()
+        self.makeRxnDict()
+        self.reactions, self.rateConstants = self.processRxnDict()
         self.refactorModel()
 
 
@@ -117,44 +93,84 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         rxnDict = {}
         for i, rxn in enumerate(self.reactions):
             # Process products and reactants in reaction
-            rxn = rxn.replace(' ', '')
-            reactionSplit = rxn.split('->')
-            reactant = reactionSplit[0]
-            productSplit = reactionSplit[1].split(';')
-            product = productSplit[0]
-            if '+' in reactant:
-                reactant = reactant.split('+')
-            else:
-                reactant = [reactant]
-            if '+' in product:
-                product = product.split('+')
-            else:
-                product = [product]
-            reactant = frozenset(reactant)
-            product = frozenset(product)
+            reactant, product = self.parseReactionString(rxn)
             # Get the rate constant value for the reaction
             k = float(self.rateConstants[i].split(' ')[2])
             # Make sure that product(s) and reactant(s) are not the same, then either add to
             # the reaction dictionary or update rate constant
             if reactant != product:
-                reaction = Reaction(reactant, product, k)
-                if (reactant, product) in rxnDict.keys():
+                reaction = self.reactionToString(Reaction(reactant, product, k))
+                if self.rxnDictContains(reaction):
                     self.combinedReactions.append(rxn)
-                    rxnDict[(reactant, product)] += k
+                    rxnDict[reaction] += k
                 else:
-                    rxnDict[(reactant, product)] = k
+                    rxnDict[reaction] = k
         self.rxnDict = rxnDict
         return rxnDict
 
+    def reactantEqualProduct(self, reactant, product):
 
 
-    def processRxnSet(self):
+    # def getReadableRxnDict(self):
+    #     readDict = {}
+    #     for reaction in self.rxnDict.keys():
+    #         readDict[self.reactionToString(reaction)] = reaction.k
+    #     return readDict
+
+    # def reactionToString(self, reaction):
+    #     reactionStr = ''
+    #     reactionStr += reaction.reactant[0]
+    #     if len(reaction.reactant) == 2:
+    #         reactionStr += f' + {reaction.reactant[1]}'
+    #     reactionStr += f' -> {reaction.product[0]}'
+    #     if len(reaction.product) == 2:
+    #         reactionStr += f' + {reaction.product[1]}'
+    #     return reactionStr
+
+    def parseReactionString(self, reaction):
+        rxn = reaction.replace(' ', '')
+        reactionSplit = rxn.split('->')
+        reactant = reactionSplit[0]
+        productSplit = reactionSplit[1].split(';')
+        product = productSplit[0]
+        if '+' in reactant:
+            reactant = reactant.split('+')
+        else:
+            reactant = [reactant]
+        if '+' in product:
+            product = product.split('+')
+        else:
+            product = [product]
+        return reactant, product
+
+    def rxnIsEqual(self, rxn1, rxn2):
+        reactants1, products1 = self.parseReactionString(rxn1)
+        reactants2, products2 = self.parseReactionString(rxn2)
+        # If they are different sizes, then obviously they're not the same reaction
+        if (len(reactants1) != len(reactants2)) or (len(products1) != len(products2)):
+            return False
+        # Uni-uni: just check if reactants and products are the same for both reactions
+        if len(reactants1) == 1 and len(products1) == 1:
+            return (reactants1 == reactants2) and (products1 == products1)
+        # Bi-___: Check if reactants are equal and if they're equal when order is reversed
+        if len(reactants1) == 2:
+            sameReactants = (reactants1 == reactants2) or \
+                            ([reactants1[1], reactants1[0]] == reactants2)
+        else:
+            sameReactants = reactants1 == reactants2
+        if len(products1) == 2:
+            sameProducts = (products1 == products2) or \
+                            ([products1[1], products1[0]] == reactants2)
+        else:
+            sameProducts = products1 == products2
+        return sameProducts and sameReactants
+
+    def processRxnDict(self):
         # Make a reaction dictionary to combine duplicates
         # Convert the dictionary into two lists of strings: reactions and rate constants
-        self.makeRxnDict()
         reactionList = []
         rateConstantList = []
-        for index, item in enumerate(self.rxnDict.rxnDict):
+        for index, item in enumerate(self.rxnDict):
             reaction = ''
             rateLaw = f'; k{index}*'
             rateConstant = f'k{index} = '
@@ -180,7 +196,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
                 for species in item[1]:
                     reaction += species
             reaction = reaction + rateLaw
-            rateConstant = rateConstant + str(self.rxnDict.rxnDict[item])
+            rateConstant = rateConstant + str(self.rxnDict[item])
             reactionList.append(reaction)
             rateConstantList.append(rateConstant)
         return reactionList, rateConstantList
@@ -247,9 +263,15 @@ S0 = 1.0
 S1 = 5.0
 S2 = 9.0'''
 #
-# model = AntimonyModel(ant)
-# print(model.makeRxnDict())
-# model.makeRxnDict()
-# d = model.rxnDict.rxnDict
-# for item in d:
-#     print(item)
+model = AntimonyModel(ant)
+model.makeRxnDict()
+print(model.getReadableRxnDict())
+
+
+# TODO:
+'''
+1. Method to check if products and reactants are the same
+2. Finish make reaction dict
+3. Test: parse, reactionEqualsProduct, dictContains, makeReactionDict
+4. Move on the the other methods and fix/test those
+'''
