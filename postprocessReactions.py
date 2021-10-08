@@ -44,6 +44,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.nFloats = 0
         self.fitness = 1E17
         self.nSpecies = 0
+        self.rxnDict = {}
         self.combinedReactions = [] # Reactions that are fused go here
         self.uneccessaryRxns = [] # Reactions that are removed without affecting oscillation go here
 
@@ -77,55 +78,47 @@ class AntimonyModel(object, metaclass=PostInitCaller):
     def rxnDictContains(self, reaction):
         for key in self.rxnDict.keys():
             if self.rxnIsEqual(reaction, key):
-                return True
-        return False
+                return True, key
+        return False, None
 
     def removeDuplicateRxns(self):
         self.makeRxnDict()
         self.reactions, self.rateConstants = self.processRxnDict()
         self.refactorModel()
+        return self.ant
 
 
 
     def makeRxnDict(self):
         # Create a dictionary for all reactions that has reaction and products sets as a tuple as the key and the
         # rate constant as a value. If a reaction is already in the dictionary, add the rate constants together.
-        rxnDict = {}
         for i, rxn in enumerate(self.reactions):
-            # Process products and reactants in reaction
-            reactant, product = self.parseReactionString(rxn)
             # Get the rate constant value for the reaction
             k = float(self.rateConstants[i].split(' ')[2])
             # Make sure that product(s) and reactant(s) are not the same, then either add to
             # the reaction dictionary or update rate constant
-            if reactant != product:
-                reaction = self.reactionToString(Reaction(reactant, product, k))
-                if self.rxnDictContains(reaction):
-                    self.combinedReactions.append(rxn)
-                    rxnDict[reaction] += k
+            if not self.reactantEqualsProduct(rxn):
+                reaction = self.isolateReaction(rxn)
+                contains, key = self.rxnDictContains(reaction)
+                if contains:
+                    self.combinedReactions.append(reaction)
+                    self.rxnDict[key] += k
                 else:
-                    rxnDict[reaction] = k
-        self.rxnDict = rxnDict
-        return rxnDict
+                    self.rxnDict[reaction] = k
+        return self.rxnDict
 
-    def reactantEqualProduct(self, reactant, product):
+    def reactantEqualsProduct(self, reaction):
+        reactant, product = self.parseReactionString(reaction)
+        if len(reactant) != len(product):
+            return False
+        if len(reactant) == 1:
+            return reactant == product
+        return reactant == product or [reactant[1], reactant[0]] == product
 
 
-    # def getReadableRxnDict(self):
-    #     readDict = {}
-    #     for reaction in self.rxnDict.keys():
-    #         readDict[self.reactionToString(reaction)] = reaction.k
-    #     return readDict
-
-    # def reactionToString(self, reaction):
-    #     reactionStr = ''
-    #     reactionStr += reaction.reactant[0]
-    #     if len(reaction.reactant) == 2:
-    #         reactionStr += f' + {reaction.reactant[1]}'
-    #     reactionStr += f' -> {reaction.product[0]}'
-    #     if len(reaction.product) == 2:
-    #         reactionStr += f' + {reaction.product[1]}'
-    #     return reactionStr
+    def isolateReaction(self, reaction):
+        # Remove the rate law portion of a reaction
+        return reaction.split(';')[0]
 
     def parseReactionString(self, reaction):
         rxn = reaction.replace(' ', '')
@@ -160,7 +153,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
             sameReactants = reactants1 == reactants2
         if len(products1) == 2:
             sameProducts = (products1 == products2) or \
-                            ([products1[1], products1[0]] == reactants2)
+                            ([products1[1], products1[0]] == products2)
         else:
             sameProducts = products1 == products2
         return sameProducts and sameReactants
@@ -170,35 +163,20 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         # Convert the dictionary into two lists of strings: reactions and rate constants
         reactionList = []
         rateConstantList = []
-        for index, item in enumerate(self.rxnDict):
-            reaction = ''
+        for index, key in enumerate(self.rxnDict.keys()):
+            rateConstant = f'k{index} = {self.rxnDict[key]}'
+            # Add rate law to the reaction string:
+            reaction = key
             rateLaw = f'; k{index}*'
-            rateConstant = f'k{index} = '
-            # If there are two reactants, put a '+' between them
-            if len(item[0]) == 2:
-                for species in item[0]:
-                    reaction += species + '+'
-                    rateLaw += species + '*'
-                rateLaw = rateLaw[:-1]  # remove second '*'
-                reaction = reaction[:-1]  # remove the second '+'
-            else:
-                # If there's only one reactant, just add it
-                for species in item[0]:
-                    reaction += species
-                    rateLaw += species
-            reaction += '->'
-            # Now do the same for products
-            if len(item[1]) == 2:
-                for species in item[1]:
-                    reaction += species + '+'
-                reaction = reaction[:-1]
-            else:
-                for species in item[1]:
-                    reaction += species
+            reactant, _ = self.parseReactionString(key)
+            rateLaw += reactant[0]
+            if len(reactant) == 2:
+                rateLaw += f'*{reactant[1]}'
             reaction = reaction + rateLaw
-            rateConstant = rateConstant + str(self.rxnDict[item])
             reactionList.append(reaction)
             rateConstantList.append(rateConstant)
+        self.reactions = reactionList
+        self.rateConstants = rateConstantList
         return reactionList, rateConstantList
 
     def refactorModel(self):
@@ -206,6 +184,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         model = self.speciesList + self.reactions + self.rateConstants + self.initialConditions
         self.antLines = model
         self.ant = joinAntimonyLines(model)
+        return self.ant
 
     def deleteUnecessaryReactions(self):
         for index, line in enumerate(self.antLines):
@@ -230,48 +209,40 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.refactorModel()
 
 
-ant = '''var S0
-var S1
-var S2
-S2 -> S0; k0*S2
-S0 -> S1+S0; k1*S0
-S1 -> S0+S1; k2*S1
-S1 -> S0+S2; k3*S1
-S2 -> S0; k4*S2
-S2 + S1 -> S2; k5*S2*S1
-S0 -> S1+S0; k6*S0
-S2 -> S1+S1; k7*S2
-S2 -> S2+S2; k8*S2
-S1 -> S0; k9*S1
-S2 + S0 -> S1 + S2; k10*S2*S0
-S1 + S1 -> S0 + S1; k11*S1*S1
-S0 -> S0+S1; k12*S0
-k0 = 7.314829248542936
-k1 = 35.95227823979854
-k2 = 41.54190920864631
-k3 = 4.7667514994980555
-k4 = 11.830987147018757
-k5 = 15.50936673547638
-k6 = 5.400180372157445
-k7 = 8.171034267002623
-k8 = 15.252690388653708
-k9 = 7.202857436875558
-k10 = 13.147047088765943
-k11 = 7.20304738000393
-k12 = 48.71489357141781
-S0 = 1.0
-S1 = 5.0
-S2 = 9.0'''
+# ant = '''var S0
+# var S1
+# var S2
+# S2 -> S0; k0*S2
+# S0 -> S1+S0; k1*S0
+# S1 -> S0+S1; k2*S1
+# S1 -> S0+S2; k3*S1
+# S2 -> S0; k4*S2
+# S2 + S1 -> S2; k5*S2*S1
+# S0 -> S1+S0; k6*S0
+# S2 -> S1+S1; k7*S2
+# S2 -> S2+S2; k8*S2
+# S1 -> S0; k9*S1
+# S2 + S0 -> S1 + S2; k10*S2*S0
+# S1 + S1 -> S0 + S1; k11*S1*S1
+# S0 -> S0+S1; k12*S0
+# k0 = 7.314829248542936
+# k1 = 35.95227823979854
+# k2 = 41.54190920864631
+# k3 = 4.7667514994980555
+# k4 = 11.830987147018757
+# k5 = 15.50936673547638
+# k6 = 5.400180372157445
+# k7 = 8.171034267002623
+# k8 = 15.252690388653708
+# k9 = 7.202857436875558
+# k10 = 13.147047088765943
+# k11 = 7.20304738000393
+# k12 = 48.71489357141781
+# S0 = 1.0
+# S1 = 5.0
+# S2 = 9.0'''
+# #
+# model = AntimonyModel(ant)
+# model.removeDuplicateRxns()
 #
-model = AntimonyModel(ant)
-model.makeRxnDict()
-print(model.getReadableRxnDict())
-
-
-# TODO:
-'''
-1. Method to check if products and reactants are the same
-2. Finish make reaction dict
-3. Test: parse, reactionEqualsProduct, dictContains, makeReactionDict
-4. Move on the the other methods and fix/test those
-'''
+# print(model.antLines)
