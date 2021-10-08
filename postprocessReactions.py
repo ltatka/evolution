@@ -46,7 +46,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.nSpecies = 0
         self.rxnDict = {}
         self.combinedReactions = [] # Reactions that are fused go here
-        self.uneccessaryRxns = [] # Reactions that are removed without affecting oscillation go here
+        self.deletedRxns = [] # Reactions that are removed without affecting oscillation go here
 
     def post_init(self):
         # Separate antimony model into lists of reactions, floating and boundary species, rate contsants,
@@ -81,7 +81,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
                 return True, key
         return False, None
 
-    def removeDuplicateRxns(self):
+    def combineDuplicateRxns(self):
         self.makeRxnDict()
         self.reactions, self.rateConstants = self.processRxnDict()
         self.refactorModel()
@@ -186,63 +186,71 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         self.ant = joinAntimonyLines(model)
         return self.ant
 
-    def deleteUnecessaryReactions(self):
-        for index, line in enumerate(self.antLines):
-            if not line.startswith('#') and '->' in line:
-                # Comment out the reaction
-                self.antLines[index] = '#' + line
-                # Join the new antimony lines
-                newModel = joinAntimonyLines(self.antLines)
-
-                damped, toInf = isModelDampled(newModel)
-                # If it the deleted reaction does not break the model, then delete it's rate constant
-                if not damped and not toInf:
-                    # subtract length of speciesList because we're indexing entire model to adjust indices
-                    del self.rateConstants[index - len(self.speciesList)]
-                    # subtract number of species for same reason as above
-                    del self.reactions[index - len(self.speciesList)]
-                    del self.antLines[index]
-                # uncomment the 'deleted' reaction if it is necessary for oscillation
-                else:
-                    self.antLines[index] = self.antLines[index][1:]
-        # Store any changes
+    def deleteUnnecessaryReactions(self):
+        idxToRemove = []
+        for i, reaction in enumerate(self.reactions):
+            self.reactions[i] = '#' + self.reactions[i]
+            self.refactorModel()
+            damped, toInf = isModelDampled(self.ant)
+            # If it the commented reaction does not break the model, add it to list of deleted rate reactions
+            # and tag it's index for deletion. Keep it commented
+            if not damped and not toInf:
+                idxToRemove.append(i)
+                self.deletedRxns.append(self.reactions[i][1:])
+            # if it needs the reaction to oscillate, uncomment it
+            else:
+                self.reactions[i] = self.reactions[i][1:]
+                self.refactorModel()
+        # Delete the tagged indices in rate constant list and reaction list
+        self.rateConstants = [i for j, i in enumerate(self.rateConstants) if j not in idxToRemove]
+        self.reactions = [i for j, i in enumerate(self.reactions) if j not in idxToRemove]
         self.refactorModel()
 
 
-# ant = '''var S0
-# var S1
-# var S2
-# S2 -> S0; k0*S2
-# S0 -> S1+S0; k1*S0
-# S1 -> S0+S1; k2*S1
-# S1 -> S0+S2; k3*S1
-# S2 -> S0; k4*S2
-# S2 + S1 -> S2; k5*S2*S1
-# S0 -> S1+S0; k6*S0
-# S2 -> S1+S1; k7*S2
-# S2 -> S2+S2; k8*S2
-# S1 -> S0; k9*S1
-# S2 + S0 -> S1 + S2; k10*S2*S0
-# S1 + S1 -> S0 + S1; k11*S1*S1
-# S0 -> S0+S1; k12*S0
-# k0 = 7.314829248542936
-# k1 = 35.95227823979854
-# k2 = 41.54190920864631
-# k3 = 4.7667514994980555
-# k4 = 11.830987147018757
-# k5 = 15.50936673547638
-# k6 = 5.400180372157445
-# k7 = 8.171034267002623
-# k8 = 15.252690388653708
-# k9 = 7.202857436875558
-# k10 = 13.147047088765943
-# k11 = 7.20304738000393
-# k12 = 48.71489357141781
-# S0 = 1.0
-# S1 = 5.0
-# S2 = 9.0'''
-# #
-# model = AntimonyModel(ant)
-# model.removeDuplicateRxns()
+ant = '''var S0
+var S1
+var S2
+S2 -> S0; k0*S2
+S0 -> S1+S0; k1*S0
+S1 -> S0+S1; k2*S1
+S1 -> S0+S2; k3*S1
+S2 -> S0; k4*S2
+S2 + S1 -> S2; k5*S2*S1
+S0 -> S1+S0; k6*S0
+S2 -> S1+S1; k7*S2
+S2 -> S2+S2; k8*S2
+S1 -> S0; k9*S1
+S2 + S0 -> S1 + S2; k10*S2*S0
+S1 + S1 -> S0 + S1; k11*S1*S1
+S0 -> S0+S1; k12*S0
+k0 = 7.314829248542936
+k1 = 35.95227823979854
+k2 = 41.54190920864631
+k3 = 4.7667514994980555
+k4 = 11.830987147018757
+k5 = 15.50936673547638
+k6 = 5.400180372157445
+k7 = 8.171034267002623
+k8 = 15.252690388653708
+k9 = 7.202857436875558
+k10 = 13.147047088765943
+k11 = 7.20304738000393
+k12 = 48.71489357141781
+S0 = 1.0
+S1 = 5.0
+S2 = 9.0'''
 #
-# print(model.antLines)
+
+# import tellurium as te
+# r = te.loada(ant)
+# r.simulate(0, 1000, 1000)
+# r.plot()
+#
+model = AntimonyModel(ant)
+model.combineDuplicateRxns()
+# model.antLines.insert(3, 'S1 -> S0; k00*S1')
+# model.antLines.insert(14, 'k00 = 5')
+# model.refactorModel()
+model.deleteUnnecessaryReactions()
+
+print(model.ant)

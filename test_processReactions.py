@@ -1,6 +1,6 @@
 import unittest
 import postprocessReactions as pp
-
+from damped_analysis import isModelDampled
 
 class UnitTests(unittest.TestCase):
     ant = ('var S0\n'
@@ -228,6 +228,37 @@ class UnitTests(unittest.TestCase):
                         'S2 = 9.0']
         astr = self.ant
         testModel = pp.AntimonyModel(astr)
-        testModel.removeDuplicateRxns()
+        testModel.combineDuplicateRxns()
         self.assertEqual(testModel.ant, trueAnstr)
         self.assertListEqual(testModel.antLines, trueAntLines)
+
+    def test_deleteUnnecessaryReactions(self):
+        astr = self.ant
+        testModel = pp.AntimonyModel(astr)
+        testModel.combineDuplicateRxns()
+        testModel.deleteUnnecessaryReactions()
+        trueDeletedRxns = ['S1 -> S0+S1; k2*S1',
+                           'S2 -> S2+S2; k6*S2',
+                           'S1 -> S0; k7*S1']
+        trueAnstr = ('var S0\n'
+                    'var S1\n'
+                    'var S2\n'
+                    'S2 -> S0; k0*S2\n'
+                    'S0 -> S1+S0; k1*S0\n'
+                    'S1 -> S0+S2; k3*S1\n'
+                    'S2 + S1 -> S2; k4*S2*S1\n'
+                    'S2 -> S1+S1; k5*S2\n'
+                    'S2 + S0 -> S1 + S2; k8*S2*S0\n'
+                    'S1 + S1 -> S0 + S1; k9*S1*S1\n'
+                    'k0 = 19.145816395561692\n'
+                    'k1 = 90.0673521833738\n'
+                    'k3 = 4.7667514994980555\n'
+                    'k4 = 15.50936673547638\n'
+                    'k5 = 8.171034267002623\n'
+                    'k8 = 13.147047088765943\n'
+                    'k9 = 7.20304738000393\n'
+                    'S0 = 1.0\n'
+                    'S1 = 5.0\n'
+                    'S2 = 9.0')
+        self.assertListEqual(testModel.deletedRxns, trueDeletedRxns)
+        self.assertEqual(testModel.ant, trueAnstr)
