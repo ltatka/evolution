@@ -14,7 +14,7 @@ import os
 #         mm.collection.update_one(query, newVal)
 #
 
-dir = '/home/hellsbells/Desktop/hyakOscillators2'
+dir = '/home/hellsbells/oldEv/PASS3'
 
 def countReactions(astr):
     astr = astr.splitlines()
@@ -56,7 +56,8 @@ for file in os.listdir(dir):
                  "num_nodes": 3,
                  "num_reactions": countReactions(astr),
                  "oscillator": True,
-                 "model": astr}
+                 "model": astr,
+                 "processed": False}
 
         mm.collection.insert_one(entry)
 print(f'There are {fakers} fakers')

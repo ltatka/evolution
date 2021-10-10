@@ -1,67 +1,19 @@
 import numpy as np
 import tellurium as te
-from dataclasses import dataclass
-import readObjData
-from evolve import readObjectiveFunction
+from evolUtils import readObjectiveFunction
 import random
 from copy import deepcopy
+from damped_analysis import isModelDampled
 
-initialConditions = [1, 5, 9, 3, 10, 3, 7, 1, 6, 3, 10, 11, 4, 6, 2, 7, 1, 9, 5, 7, 2, 4, 5, 10, 4, 1, 6, 7, 3, 2, 7, 8]
 
-# Fitness = 7.372410996154274
-antStr = '''
-var S0
-var S1
-var S2
-var S3
-var S4
-ext S5
-ext S6
-ext S7
-ext S8
-ext S9
-S3 + S2 -> S1 + S2; k5*S3*S2
-S1 -> S1; k12*S1
-S1 -> S0; k0*S1
-S2 -> S4; k1*S2
-S6 -> S4+S6; k2*S6
-S3 -> S0; k3*S3
-S4 + S0 -> S1; k4*S4*S0
-S4 -> S1+S4; k6*S4
-S4 -> S1+S4; k7*S4
-S1 + S0 -> S3; k8*S1*S0
-S0 + S0 -> S0 + S0; k9*S0*S0
-S2 + S0 -> S0; k10*S2*S0
-S2 + S1 -> S2 + S0; k11*S2*S1
-S0 + S1 -> S3; k12*S0*S1
-S2 -> S3+S1; k13*S2
-S4 -> S3; k14*S4
-k0 = 11.0073864078374
-k1 = 20.834047235150877
-k2 = 25.86274972867825
-k3 = 49.94562904979901
-k4 = 35.396880649350614
-k5 = 22.610393366712717
-k6 = 128.6797779260811
-k7 = 32.182988029374265
-k8 = 27.151163612671933
-k9 = 8.84493678326487
-k10 = 28.435636484961123
-k11 = 35.243886618860095
-k12 = 36.970775715909255
-k13 = 11.973346291514053
-k14 = 0.05810930278888904
-S0 = 1.0
-S1 = 5.0
-S2 = 9.0
-S3 = 3.0
-S4 = 10.0
-S5 = 3.0
-S6 = 7.0
-S7 = 1.0
-S8 = 6.0
-S9 = 3.0
-'''
+
+
+def joinAntimonyLines(antLines):
+    if antLines[0] == '':
+        antLines = antLines[1:]
+    return '\n'.join(antLines)
+
+
 class Reaction():
     def __init__(self, reactant, product, k):
         if isinstance(reactant, frozenset) and isinstance(product, frozenset):
@@ -75,6 +27,7 @@ class Reaction():
     def isEqual(self, other):
         return self.reactant == other.reactant and self.product == other.product
 
+
 class ReactionSet():
     def __init__(self):
         self.rxnDict = {}
@@ -86,31 +39,45 @@ class ReactionSet():
         return (reaction.reactant, reaction.product) in self.rxnDict
 
     def updateRateConstant(self, reaction):
-        self.rxnDict[(reaction.reactant, reaction.product)] = self.rxnDict[(reaction.reactant, reaction.product)] + reaction.k
+        self.rxnDict[(reaction.reactant, reaction.product)] = self.rxnDict[
+                                                                  (reaction.reactant, reaction.product)] + reaction.k
 
-@dataclass
-class AntimonyModel:
-    ant: str
-    objectiveData = readObjectiveFunction()
-    antLines = []
-    reactions = []
-    nSpecies: int = 0
-    speciesList = []
-    initialConditions = []
-    rateConstants = []
-    nFloats: int = 0
-    fitness: float = 1E17
 
+class PostInitCaller(type):
+    def __call__(cls, *args, **kwargs):
+        obj = type.__call__(cls, *args, **kwargs)
+        obj.post_init()
+        return obj
+
+
+class AntimonyModel(object, metaclass=PostInitCaller):
     rxnSet = {}
     pDeleteRxn = .50
     pDelete1 = .45
     pDelete2 = .35
     rateConstantRange = .1
-    pKeepWorseModel = .3
+    pKeepWorseModel = 1
 
-    def __post_init__(self):
-        # After post_init, the AntimonyModel will have no duplicate
-        # reactions and no reactions where the product and reactant are the same.
+    def __init__(self, ant_str, removeDupes=True, objectiveData=False):
+        #TODO:
+        '''
+        processReactions: if False, will not go through and delete duplicates
+        objectiveData: if False, no objective data will be read ( won't be able to test fitness)
+        '''
+        if objectiveData:
+            self.objectiveData = readObjectiveFunction()
+        self.removeDupes = removeDupes
+        self.ant = ant_str
+        self.antLines = []
+        self.reactions = []
+        self.speciesList = []
+        self.initialConditions = []
+        self.rateConstants = []
+        self.nFloats = 0
+        self.fitness = 1E17
+        self.nSpecies = 0
+
+    def post_init(self):
         lines = self.ant.split('\n')
         newAnt = ''
         for line in lines:
@@ -130,11 +97,13 @@ class AntimonyModel:
                     self.initialConditions.append(line)
                 newAnt += line + '\n'
                 self.antLines.append(line)
+        del self.ant
         self.ant = newAnt
-        self.removeDuplicateRxns()
+        if self.removeDupes:
+            self.removeDuplicateRxns()
 
     def removeDuplicateRxns(self):
-        self.makeRxnSet()
+        # self.makeRxnSet()
         self.reactions, self.rateConstants = self.processRxnSet()
         self.refactorModel()
 
@@ -150,10 +119,12 @@ class AntimonyModel:
                 rateLaw = productSplit[1]
                 if '+' in reactant:
                     reactant = reactant.split('+')
-                else: reactant = [reactant]
+                else:
+                    reactant = [reactant]
                 if '+' in product:
                     product = product.split('+')
-                else: product = [product]
+                else:
+                    product = [product]
                 k = rateLaw.split('*')[0]
                 for l in self.antLines:
                     if l.startswith(k):
@@ -169,12 +140,10 @@ class AntimonyModel:
                         rxnSet.add(reaction)
         self.rxnSet = rxnSet
 
-
-
     def processRxnSet(self):
         self.makeRxnSet()
         reactionList = []
-        rateConstantList= []
+        rateConstantList = []
         for index, item in enumerate(self.rxnSet.rxnDict):
             reaction = ''
             rateLaw = f'; k{index}*'
@@ -184,10 +153,10 @@ class AntimonyModel:
                 for species in item[0]:
                     reaction += species + '+'
                     rateLaw += species + '*'
-                rateLaw = rateLaw[:-1] #remove second '*'
-                reaction = reaction[:-1] #remove the second '+'
+                rateLaw = rateLaw[:-1]  # remove second '*'
+                reaction = reaction[:-1]  # remove the second '+'
             else:
-            # If there's only one reactant, just add it
+                # If there's only one reactant, just add it
                 for species in item[0]:
                     reaction += species
                     rateLaw += species
@@ -206,17 +175,10 @@ class AntimonyModel:
             rateConstantList.append(rateConstant)
         return reactionList, rateConstantList
 
-
-
-
     def refactorModel(self):
         model = self.speciesList + self.reactions + self.rateConstants + self.initialConditions
         self.antLines = model
-        newAntStr = ''
-        for line in model:
-            newAntStr += line + '\n'
-        self.ant = newAntStr
-
+        self.ant = joinAntimonyLines(model)
 
     def simulate(self):
         numberOfPoints = self.objectiveData.numberOfPoints
@@ -228,53 +190,94 @@ class AntimonyModel:
         return t, y
 
     def evalFitness(self):
+        self.refactorModel()
         try:
             t, y = self.simulate()
             nFloats = self.nFloats
             # compute fitness with respect to each node
-            deviation = np.zeros (nFloats) # Size = number of floats
+            deviation = np.zeros(nFloats)  # Size = number of floats
             smallestDeviation = 1E18
-            for j in range (nFloats): # loop all nFloats
+            for j in range(nFloats):  # loop all nFloats
                 deviation[j] = 0;
-                for i in range (self.objectiveData.numberOfPoints - 1):
+                for i in range(self.objectiveData.numberOfPoints - 1):
                     # list integers must be indices or slices
-                    deviation[j] = deviation[j] + (y[i][j] - self.objectiveData.outputData[i])**2
+                    deviation[j] = deviation[j] + (y[i][j] - self.objectiveData.outputData[i]) ** 2
                 if smallestDeviation > deviation[j]:
                     smallestDeviation = deviation[j]
             # Size penalty:
             smallestDeviation = smallestDeviation + 100 * len(self.reactions)
         except Exception as err:
-             # Assign high fitness
-             self.fitness = 1E17
-             return 1E17
+            # Assign high fitness
+            self.fitness = 1E17
+            return 1E17
         self.fitness = smallestDeviation
         return smallestDeviation
 
     def deleteReaction(self):
         oldReactions = deepcopy(self.reactions)
         oldFitness = deepcopy(self.fitness)
+        oldRateConstants = deepcopy(self.rateConstants)
         if len(self.reactions) > 5:
             nDelete = random.choices([1, 2, 3], weights=[self.pDelete1, self.pDelete2,
                                                          1 - (self.pDelete1 + self.pDelete2)], k=1)
-        else: # if 5 or fewer reactions, just delete 1
+        else:  # if 5 or fewer reactions, just delete 1
             nDelete = [1]
         rxnDelete = random.choices(list(range(len(self.reactions))), k=nDelete[0])
         for i in rxnDelete:
             self.reactions[i] = -1
+            self.rateConstants[i] = -1
         self.reactions = list(filter((-1).__ne__, self.reactions))
+        self.rateConstants = list(filter((-1).__ne__, self.rateConstants))
         newFitness = self.evalFitness()
         if oldFitness < newFitness:
             p = random.random()
             if p < self.pKeepWorseModel:
                 self.reactions = oldReactions
                 self.fitness = oldFitness
+                self.rateConstants = oldRateConstants
+                self.refactorModel()
 
     def mutateRateConstant(self):
-        multiplier = (random.random() - self.rateConstantRange)/(10*self.rateConstantRange)
-        #TODO: select so it's only one of the rate constants that has a reaction
+        multiplier = (random.random() - self.rateConstantRange) / (10 * self.rateConstantRange)
+        i = random.randint(0, len(self.rateConstants) - 1)
+        oldRateConstant = deepcopy(self.rateConstants[i])
+        oldFitness = deepcopy(self.fitness)
+        k, num = self.rateConstants[i].split(' = ')
+        num = multiplier * float(num)
+        self.rateConstants[i] = k + ' = ' + str(num)
+        newFitness = self.evalFitness()
+        if oldFitness < newFitness:
+            p = random.random()
+            if p < self.pKeepWorseModel:
+                self.rateConstants[i] = oldRateConstant
+                self.fitness = oldFitness
+                self.refactorModel()
 
+    def mutateReactions(self):
+        p = random.random()
+        if p < 0.5:
+            self.mutateReactions()
+        else:
+            self.mutateRateConstant()
 
+    def deleteUnecessaryReactions(self):
+        for index, line in enumerate(self.antLines):
+            if not line.startswith('#') and '->' in line:
+                # Comment out the reaction
+                self.antLines[index] = '#' + line
+                # Join the new antimony lines
+                newModel = joinAntimonyLines(self.antLines)
 
-model = AntimonyModel(antStr)
-model.evalFitness()
-print(model.fitness)
+                damped, toInf = isModelDampled(newModel)
+                # If it the deleted reaction does not break the model, then delete it's rate constant
+                if not damped and not toInf:
+                    # subtract length of speciesList because we're indexing entire model to adjust indices
+                    del self.rateConstants[index - len(self.speciesList)]
+                    # subtract number of species for same reason as above
+                    del self.reactions[index - len(self.speciesList)]
+                    del self.antLines[index]
+                # uncomment the 'deleted' reaction if it is necessary for oscillation
+                else:
+                    self.antLines[index] = self.antLines[index][1:]
+        # Store any changes
+        self.refactorModel()
