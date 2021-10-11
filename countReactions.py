@@ -104,7 +104,8 @@ def countReactions(astr):
     return getPortions(reactionCounts)
 
 
-def countAllReactions(query):
+
+def countAllReactions_query(query):
     models = mm.query_database(query)
     allModelCounts = {'all totals': [],
                       'all uni-uni portion': [],
@@ -126,16 +127,45 @@ def countAllReactions(query):
                              "reactionsCounted": True}}
         mm.collection.update_one(query, newEntry)
         # Add the reaction count dictionary info to the overall counting dict
-        for key in reactionDict.keys():
-            newKey = 'all ' + key
-            try:
-                allModelCounts[newKey].append(reactionDict[key])
-            except KeyError:
-                continue
-        allModelCounts['has autocatalytic reaction'].append(int(reactionDict['autocatalysis'] == 0))
-        allModelCounts['all IDs'].append(ID)
-        allModelCounts['all totals'].append(reactionDict['total'])
+        allModelCounts = updateCounter(reactionDict, allModelCounts, ID)
     return allModelCounts
+
+
+def countAllReactions_directory(directory):
+    allModelCounts = {'all totals': [],
+                      'all uni-uni portion': [],
+                      'all uni-bi portion': [],
+                      'all bi-uni portion': [],
+                      'all bi-bi portion': [],
+                      'all degradation portion': [],
+                      'all autocatalysis portion': [],
+                      'has autocatalytic reaction': [],
+                      'all IDs': []
+                      }
+    os.chdir(directory)
+    for file in os.listdir(directory):
+        with open(file, 'r') as f:
+            astr = f.read()
+            f.close()
+        ID = file[:-4]
+        reactionDict = countReactions(astr)
+        # Add the reaction count dictionary info to the overall counting dict
+        allModelCounts = updateCounter(reactionDict, allModelCounts, ID)
+    return allModelCounts
+
+def updateCounter(reactionDict, allModelCounts, ID):
+    for key in reactionDict.keys():
+        newKey = 'all ' + key
+        try:
+            allModelCounts[newKey].append(reactionDict[key])
+        except KeyError:
+            continue
+    allModelCounts['has autocatalytic reaction'].append(int(reactionDict['autocatalysis'] == 0))
+    allModelCounts['all IDs'].append(ID)
+    allModelCounts['all totals'].append(reactionDict['total'])
+    return allModelCounts
+
+
 
 def writeOutCounts(path, allCountsDict):
 
