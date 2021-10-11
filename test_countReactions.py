@@ -99,7 +99,7 @@ class UnitTests(unittest.TestCase):
         rxnDict = cr.getPortions(reactionDict)
         self.assertDictEqual(rxnDict, truePortions)
 
-    def test_reactionCounts(self):
+    def test_countReactions(self):
         rxnCounts = cr.countReactions(self.model)
         trueCounts = {'uni-uni portion': 0.14285714285714285,
                       'uni-uni': 1,
