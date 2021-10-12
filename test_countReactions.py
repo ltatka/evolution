@@ -1,5 +1,6 @@
 import unittest
 import countReactions as cr
+from sklearn import datasets
 
 class UnitTests(unittest.TestCase):
 
@@ -115,4 +116,13 @@ class UnitTests(unittest.TestCase):
                       'autocatalysis': 0,
                       'total': 7}
         self.assertDictEqual(rxnCounts, trueCounts)
+
+    def test_bootstrap(self):
+        leftSkew = [1, 1.2, 2, .9, 3, 1, 1, 1, 3, 4]
+        rightSkew = [9, 9, 8.9, 8, 8, 9., 7, 7.8, 6]
+        leftSkew2 = [1, .8, .9, 2, 3.9, 3.9, 1, 1, 1]
+        p = cr.permutationTest(leftSkew, rightSkew)
+        self.assertTrue(p < 0.05)
+        p = cr.permutationTest(leftSkew, leftSkew2)
+        self.assertTrue(p > 0.05)
 

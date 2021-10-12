@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 from oscillatorDB import mongoMethods as mm
+from scipy.stats import ttest_ind, binom_test, normaltest
+import random
 
 
 # import isMassConserved
@@ -182,5 +184,33 @@ def writeOutCounts(path, allCountsDict):
     df['Total Reactions'] = allCountsDict['all totals']
     df.set_index('ID')
     df.to_csv(path_or_buf=path)
+    return df
 
+def getPValues(path, controldf, oscdf):
+    results = pd.DataFrame()
+    # Binomial test for portion of models containing autocatalytic reactions
+    controlAutoCat = np.mean(controldf['Autocatalysis Present'])
+    oscAutoCat = np.sum(oscdf['Autocatalysis Present'])
+    null_p = controlAutoCat/len(oscdf['Autocatalysis Present'])
+    p_AutocatPresent = binom_test(oscAutoCat, n=len(oscdf['Autocatalysis Present']), p=null_p)
+    results['Population prevalence of autocatalysis'] = p_AutocatPresent
+    # Two sided t test for everything else:
+    for key in controldf.keys():
+        if key != 'Autocatalysis Present' and key != 'ID':
+            results[key] = ttest_ind(controldf[key], oscdf[key])
+    results.to_csv(path_or_buf=path)
+    return results
 
+def permutationTest(control, treatment):
+    control = list(control)
+    treatment = list(treatment)
+    true_mean_diff = np.abs(np.mean(control) - np.mean(treatment))
+    pooled_sample = control + treatment
+    test_mean_diffs = []
+    random_control = random.sample(pooled_sample, len(control))
+    for i in range(1000):
+        random_treatment = [x for x in pooled_sample if x not in random_control]
+        mean_diff = np.abs(np.mean(random_control) - np.mean(random_treatment))
+        test_mean_diffs.append(int(mean_diff > true_mean_diff))
+    print(np.sum(test_mean_diffs))
+    return np.mean(test_mean_diffs)
