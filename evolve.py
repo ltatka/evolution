@@ -661,9 +661,6 @@ if __name__ == "__main__":
         print("Success.......")
 
         if defaultConfig["toZip"]:
-            with open('worstfitness.txt', 'w') as f:
-                f.write(str(worstFitness))
-                f.close()
             id_list = ''
             for model in newPopulation:
                 id_list += model.ID + "\n"
@@ -678,10 +675,6 @@ if __name__ == "__main__":
                 f.write(astr)
                 f.close()
     else:
-
-        with open('worstfitness.txt', 'w') as f:
-            f.write(str(worstFitness))
-            f.close()
         if defaultConfig["toZip"]:
             id_list = ''
             for model in newPopulation:
