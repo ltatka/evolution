@@ -82,7 +82,8 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         return False, None
 
     def combineDuplicateRxns(self):
-        self.makeRxnDict()
+        if not self.rxnDict:
+            self.makeRxnDict()
         self.reactions, self.rateConstants = self.processRxnDict()
         self.refactorModel()
         return self.ant
@@ -94,11 +95,10 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         # rate constant as a value. If a reaction is already in the dictionary, add the rate constants together.
         for i, rxn in enumerate(self.reactions):
             # Get the rate constant value for the reaction
-            k = float(self.rateConstants[i].split(' ')[2])
+            reaction, k = self.isolateReaction(rxn)
             # Make sure that product(s) and reactant(s) are not the same, then either add to
             # the reaction dictionary or update rate constant
             if not self.reactantEqualsProduct(rxn):
-                reaction = self.isolateReaction(rxn)
                 contains, key = self.rxnDictContains(reaction)
                 if contains:
                     self.combinedReactions.append(reaction)
@@ -117,8 +117,19 @@ class AntimonyModel(object, metaclass=PostInitCaller):
 
 
     def isolateReaction(self, reaction):
-        # Remove the rate law portion of a reaction
-        return reaction.split(';')[0]
+        # separate the rate law portion of a reaction
+        reaction = reaction.replace('\n', '') # remove newline character if present
+        reaction = reaction.split(';')
+        k = self.getK(reaction[1])
+        return reaction[0], k
+
+    def getK(self, rateLaw):
+        rateLaw = rateLaw.replace(' ', '')
+        k = rateLaw.split('*')[0]
+        for constant in self.rateConstants:
+            if constant.startswith(k):
+                k = constant.split('=')[1]
+                return float(k.split('#')[0])# remove commented out value, if present
 
     def parseReactionString(self, reaction):
         rxn = reaction.replace(' ', '')
@@ -144,7 +155,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
             return False
         # Uni-uni: just check if reactants and products are the same for both reactions
         if len(reactants1) == 1 and len(products1) == 1:
-            return (reactants1 == reactants2) and (products1 == products1)
+            return (reactants1 == reactants2) and (products1 == products2)
         # Bi-___: Check if reactants are equal and if they're equal when order is reversed
         if len(reactants1) == 2:
             sameReactants = (reactants1 == reactants2) or \
@@ -194,7 +205,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
             damped, toInf = isModelDampled(self.ant)
             # If it the commented reaction does not break the model, add it to list of deleted rate reactions
             # and tag it's index for deletion. Keep it commented
-            if not damped and not toInf:
+            if not damped and toInf==False:
                 idxToRemove.append(i)
                 self.deletedRxns.append(self.reactions[i][1:])
             # if it needs the reaction to oscillate, uncomment it
