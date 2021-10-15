@@ -2,8 +2,8 @@ import unittest
 import countReactions as cr
 from sklearn import datasets
 
-class UnitTests(unittest.TestCase):
 
+class UnitTests(unittest.TestCase):
     model = ('var S0\n'
              'var S1\n'
              'var S2\n'
@@ -25,13 +25,35 @@ class UnitTests(unittest.TestCase):
              'S1 = 5.0\n'
              'S2 = 9.0')
 
+    def test_getRateLawSpecies(self):
+        rxn1 = 'S2 -> S1+S1; k5*S2\n'
+        rxn2 = 'S1 + S1 -> S0 + S1; k9*S1*S1\n'
+        components1 = cr.getRateLawSpecies(rxn1)
+        components2 = cr.getRateLawSpecies(rxn2)
+        self.assertListEqual(components1, ['S2'])
+        self.assertListEqual(components2, ['S1', 'S1'])
+
+    def test_rateLawIsIncorrect(self):
+        r1 = 'S0 -> S1+S0; k1*S0\n'
+        r2 = 'S2 + S0 -> S1 + S2; k8*S2*S0\n'
+        r3 = 'S0 -> S1+S0; k1*S0*S0\n'
+        r4 = 'S0 -> S1+S0; k1*S2*S0\n'
+        r5 = 'S0 -> S1+S0; k1*S2\n'
+        r6 = 'S1 + S2 -> S0; k1*S1*S1'
+        self.assertFalse(cr.rateLawIsIncorrect(r1))
+        self.assertFalse(cr.rateLawIsIncorrect(r2))
+        self.assertTrue(cr.rateLawIsIncorrect(r3))
+        self.assertTrue(cr.rateLawIsIncorrect(r4))
+        self.assertTrue(cr.rateLawIsIncorrect(r5))
+        self.assertTrue(cr.rateLawIsIncorrect(r6))
+
     def test_getReactionType(self):
         rxn1 = 'S2 -> S1+S1; k5*S2\n'
         rxn2 = 'S1 + S1 -> S0 + S1; k9*S1*S1\n'
         rxn3 = 'S1+S1->S2; k10*S1*S1'
-        self.assertEqual(cr.getReactionType(rxn1), 'uni-bi')
-        self.assertEqual(cr.getReactionType(rxn2), 'bi-bi')
-        self.assertEqual(cr.getReactionType(rxn3), 'bi-uni')
+        self.assertEqual(cr.getReactionType(rxn1), 'Uni-Bi')
+        self.assertEqual(cr.getReactionType(rxn2), 'Bi-Bi')
+        self.assertEqual(cr.getReactionType(rxn3), 'Bi-Uni')
 
     def test_splitReactantsProducts(self):
         rxn1 = 'S2 -> S1+S1; k5*S2\n'
@@ -47,7 +69,7 @@ class UnitTests(unittest.TestCase):
         self.assertListEqual(p2, ['S0', 'S1'])
         self.assertListEqual(r3, ['S1', 'S0'])
         self.assertListEqual(p3, ['S2'])
-        self.assertEqual(rType, 'bi-uni')
+        self.assertEqual(rType, 'Bi-Uni')
 
     def test_isAutocatalytic(self):
         r1 = 'S1 -> S2; rateLaw'
@@ -75,47 +97,34 @@ class UnitTests(unittest.TestCase):
         self.assertFalse(cr.isDegradation(r3))
         self.assertFalse(cr.isDegradation(r4))
 
-    def test_getPortions(self):
-        reactionDict = {'uni-uni': 25,
-                        'uni-bi': 15,
-                        'bi-uni': 10,
-                        'bi-bi': 50,
-                        'degradation': 45,
-                        'autocatalysis': 15,
-                        'total': 100}
-        truePortions = {'uni-uni portion': 0.25,
-                        'uni-uni': 25,
-                        'uni-bi portion': 0.15,
-                        'uni-bi': 15,
-                        'bi-uni portion': 0.1,
-                        'bi-uni': 10,
-                        'bi-bi portion': 0.5,
-                        'bi-bi': 50,
-                        'degradation portion': 0.45,
-                        'degradation': 45,
-                        'autocatalysis portion': 0.15,
-                        'autocatalysis': 15,
-                        'total': 100,
-                        }
-        rxnDict = cr.getPortions(reactionDict)
-        self.assertDictEqual(rxnDict, truePortions)
-
     def test_countReactions(self):
         rxnCounts = cr.countReactions(self.model)
-        trueCounts = {'uni-uni portion': 0.14285714285714285,
-                      'uni-uni': 1,
-                      'uni-bi portion': 0.42857142857142855,
-                      'uni-bi': 3,
-                      'bi-uni portion': 0.14285714285714285,
-                      'bi-uni': 1,
-                      'bi-bi portion': 0.2857142857142857,
-                      'bi-bi': 2,
-                      'degradation portion': 0.14285714285714285,
-                      'degradation': 1,
-                      'autocatalysis portion': 0.0,
-                      'autocatalysis': 0,
-                      'total': 7}
+        trueCounts = {'Uni-Uni': 1,
+                      'Uni-Bi': 3,
+                      'Bi-Uni': 1,
+                      'Bi-Bi': 2,
+                      'Degradation': 1,
+                      'Autocatalysis': 0,
+                      'Total': 7}
         self.assertDictEqual(rxnCounts, trueCounts)
+
+    def test_autocatalysisPresent(self):
+        counts1 = {'Uni-Uni': 1,
+                   'Uni-Bi': 3,
+                   'Bi-Uni': 1,
+                   'Bi-Bi': 2,
+                   'Degradation': 1,
+                   'Autocatalysis': 0,
+                   'Total': 7}
+        counts2 = {'Uni-Uni': 1,
+                   'Uni-Bi': 3,
+                   'Bi-Uni': 1,
+                   'Bi-Bi': 2,
+                   'Degradation': 1,
+                   'Autocatalysis': 2,
+                   'Total': 7}
+        self.assertEqual(int(counts1['Autocatalysis'] > 0), 0)
+        self.assertEqual(int(counts2['Autocatalysis'] > 0), 1)
 
     def test_bootstrap(self):
         leftSkew = [1, 1.2, 2, .9, 3, 1, 1, 1, 3, 4]
@@ -125,4 +134,3 @@ class UnitTests(unittest.TestCase):
         self.assertTrue(p < 0.05)
         p = cr.permutationTest(leftSkew, leftSkew2)
         self.assertTrue(p > 0.05)
-

@@ -36,7 +36,33 @@ class UnitTests(unittest.TestCase):
            'S1 = 5.0\n'
            'S2 = 9.0')
 
+    ant2 = ("var S0\n"
+            "var S1\n"
+            "var S2\n"
+            "S2 + S1 -> S2; k0*S2*S1\n"
+            "S1 -> S0+S2; k1*S1\n"
+            "S1 -> S1+S1; k2*S1\n"
+            "S0 -> S2+S0; k3*S0\n"
+            "S0 -> S1; k4*S0\n"
+            "S2 -> S1; k5*S2   \n"
+            "S2 + S1 -> S0; k9*S2*S1\n"
+            "S0 -> S2 ; k7*S0*S0\n"
+            "k0 = 49.6133315266077\n"
+            "k1 = 0.9763331657346197\n"
+            "k2 = 52.85774324814063\n"
+            "k3 = 30.051292075813663\n"
+            "k4 = 23.277450408751783\n"
+            "k5 = 21.46703209726036\n"
+            "k6 = 13.98773279367358\n"
+            "k7 = 5.620689736685768\n"
+            "k8 = 0.784501418189822\n"
+            "k9 = 11.888276892144832\n"
+            "k10 = 18.413106161900714\n"
+            "S0 = 1.0\n"
+            "S1 = 5.0\n"
+            "S2 = 9.0\n")
     model = pp.AntimonyModel(ant)
+    model2 = pp.AntimonyModel(ant2)
 
     def test_init(self):
         trueReactions = ['S2 -> S0; k0*S2',
@@ -99,7 +125,7 @@ class UnitTests(unittest.TestCase):
         self.assertTrue(contains)
         self.assertEqual('S0 -> S1+S0', key)
 
-    def test_makeRxnSet(self):
+    def test_makeRxnDict(self):
         trueDict = {'S2 -> S0': 19.145816395561692,
                     'S0 -> S1+S0': 90.0673521833738,
                     'S1 -> S0+S1': 41.54190920864631,
@@ -117,6 +143,9 @@ class UnitTests(unittest.TestCase):
         self.model.makeRxnDict()
         self.assertEqual(self.model.rxnDict, trueDict)
         self.assertEqual(self.model.combinedReactions, trueCombinedRxns)
+
+    def test_makeRxnDict2(self):
+        self.assertEqual(len(self.model2.makeRxnDict()), 8)
 
     def test_processRxnDict(self):
         trueReactionList = ['S2 -> S0; k0*S2',
@@ -231,6 +260,43 @@ class UnitTests(unittest.TestCase):
         testModel.combineDuplicateRxns()
         self.assertEqual(testModel.ant, trueAnstr)
         self.assertListEqual(testModel.antLines, trueAntLines)
+
+    # def test_removeDuplicateRxns2(self):
+    #     astr = ('var S0\n'
+    #             'var S1\n'
+    #             'var S2\n'
+    #             'S2 + S1 -> S2; k0*S2*S1\n'
+    #             'S1 -> S0+S2; k1*S1\n'
+    #             'S1 -> S1+S1; k2*S1\n'
+    #             'S0 -> S2+S0; k3*S0\n'
+    #             'S0 -> S1; k4*S0\n'
+    #             'S2 -> S1; k5*S2   \n'
+    #             'S2 + S1 -> S0; k9*S2*S1\n'
+    #             'S0 -> S2 ; k7*S0*S0\n'
+    #             'k0 = 49.6133315266077\n'
+    #             'k1 = 0.9763331657346197\n'
+    #             'k2 = 52.85774324814063\n'
+    #             'k3 = 30.051292075813663\n'
+    #             'k4 = 23.277450408751783\n'
+    #             'k5 = 21.46703209726036\n'
+    #             'k6 = 13.98773279367358\n'
+    #             'k7 = 5.620689736685768\n'
+    #             'k8 = 0.784501418189822\n'
+    #             'k9 = 11.888276892144832\n'
+    #             'k10 = 18.413106161900714\n'
+    #             'S0 = 1.0\n'
+    #             'S1 = 5.0\n'
+    #             'S2 = 9.0\n')
+
+    def test_isolateReaction(self):
+        reaction = 'S2 -> S0; k0*S2\n'
+        r, k = self.model.isolateReaction(reaction)
+        self.assertEqual(r, 'S2 -> S0')
+        self.assertEqual(k, 7.314829248542936)
+
+    def test_getK(self):
+        k = self.model.getK('k0*S2')
+        self.assertEqual(k, 7.314829248542936)
 
     def test_deleteUnnecessaryReactions(self):
         astr = self.ant
