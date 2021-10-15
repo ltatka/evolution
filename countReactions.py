@@ -1,8 +1,10 @@
 import os
 import numpy as np
 import pandas as pd
+
+import damped_analysis
 from oscillatorDB import mongoMethods as mm
-from scipy.stats import ttest_ind, binom_test, normaltest
+from scipy.stats import chi2_contingency
 import random
 
 
@@ -17,26 +19,61 @@ def getReactionType(reaction):
     reaction = reaction.replace(' ', '')
     reactants, products = reaction.split('->')
     if '+' in reactants:
-        rxnType = 'bi-'
+        rxnType = 'Bi-'
     else:
-        rxnType = 'uni-'
+        rxnType = 'Uni-'
     if '+' in products:
-        rxnType += 'bi'
+        rxnType += 'Bi'
     else:
-        rxnType += 'uni'
+        rxnType += 'Uni'
     return rxnType
 
+def findBadRateLaws(listID):
+    badRateLaws = {}
+    for ID in listID:
+        result = mm.query_database({'ID': ID})
+        astr = result[0]['model']
+        astr = astr.splitlines()
+        for line in astr:
+            if '->' in line and not line.startswith('#'):
+                if rateLawIsIncorrect(line):
+                    if ID not in badRateLaws.keys():
+                        badRateLaws[ID] = [line]
+                    else:
+                        badRateLaws[ID].append(line)
+    return badRateLaws
+
+def rateLawIsIncorrect(reaction):
+    components = getRateLawSpecies(reaction)
+    reactants, _ = splitReactantsProducts(reaction)
+    if len(reactants) != len(components):
+        return True
+    elif reactants[0] not in components:
+        return True
+    elif len(reactants) == 2 and reactants[1] not in components:
+        # eg. S1 + S2 -> S0; k1*S1*S1
+        return True
+    else:
+        return False
+
+
+def getRateLawSpecies(reaction):
+    rateLaw = reaction.split(';')[1]
+    rateLaw = rateLaw.replace(' ', '')
+    rateLaw = rateLaw.replace('\n', '')
+    components = rateLaw.split('*')
+    return components[1:]
 
 def splitReactantsProducts(reaction, returnType=False):
     rType = getReactionType(reaction)
     reaction = reaction.replace(' ', '')
     reactants, products = reaction.split('->')
     products = products.split(';')[0]
-    if rType.startswith('bi'):
+    if rType.startswith('Bi'):
         reactants = reactants.split('+')
     else:
         reactants = [reactants]
-    if rType.endswith('bi'):
+    if rType.endswith('Bi'):
         products = products.split('+')
     else:
         products = [products]
@@ -56,9 +93,9 @@ def reactantEqualsProduct(reaction):
 
 def isAutocatalytic(reaction):
     reactants, products, rType = splitReactantsProducts(reaction, returnType=True)
-    if rType.endswith('uni'):
+    if rType.endswith('Uni'):
         return False
-    if rType.startswith('uni'):
+    if rType.startswith('Uni'):
         return reactants[0] in products and products[0] == products[1]
     else:  # bi+bi
         return not reactantEqualsProduct(reaction) and products[0] == products[1] and \
@@ -67,57 +104,44 @@ def isAutocatalytic(reaction):
 
 def isDegradation(reaction):
     reactants, products, rType = splitReactantsProducts(reaction, returnType=True)
-    return rType == 'bi-uni' and products[0] in reactants
-
-
-def getPortions(reactionDict):
-    total = reactionDict['total']
-    newDict = {}
-    for key in reactionDict.keys():
-        if key != 'total':
-            newKey = key + ' portion'
-            newDict[newKey] = reactionDict[key] / total
-            newDict[key] = reactionDict[key]
-    newDict['total'] = reactionDict['total']
-    return newDict
+    return rType == 'Bi-Uni' and products[0] in reactants
 
 
 def countReactions(astr):
     # Returns dictionary of reaction counts
-    reactionCounts = {'uni-uni': 0,
-                      'uni-bi': 0,
-                      'bi-uni': 0,
-                      'bi-bi': 0,
-                      'degradation': 0,
-                      'autocatalysis': 0,
-                      'total': 0}
+    reactionCounts = {'Uni-Uni': 0,
+                      'Uni-Bi': 0,
+                      'Bi-Uni': 0,
+                      'Bi-Bi': 0,
+                      'Degradation': 0,
+                      'Autocatalysis': 0,
+                      'Total': 0}
     lines = astr.splitlines()
     for line in lines:
         if '->' in line and not line.startswith('#'):
-            reactionCounts['total'] += 1
+            reactionCounts['Total'] += 1
             reactionCounts[getReactionType(line)] += 1
             if isAutocatalytic(line):
-                reactionCounts['autocatalysis'] += 1
+                reactionCounts['Autocatalysis'] += 1
             if isDegradation(line):
-                reactionCounts['degradation'] += 1
-        else:  # if the line is not a reaction, move to the next line
+                reactionCounts['Degradation'] += 1
+        else:  # if the line is not a reaction (or is commented out), move to the next line
             continue
-    # This dictionary contains the PORTION of each reaction type
-    return getPortions(reactionCounts)
+    return reactionCounts
 
 
 
 def countAllReactions_query(query):
     models = mm.query_database(query)
-    allModelCounts = {'all totals': [],
-                      'all uni-uni portion': [],
-                      'all uni-bi portion': [],
-                      'all bi-uni portion': [],
-                      'all bi-bi portion': [],
-                      'all degradation portion': [],
-                      'all autocatalysis portion': [],
-                      'has autocatalytic reaction': [],
-                      'all IDs': []
+    allModelCounts = {'Total': [],
+                      'Uni-Uni': [],
+                      'Uni-Bi': [],
+                      'Bi-Uni': [],
+                      'Bi-Bi': [],
+                      'Degradation': [],
+                      'Autocatalysis': [],
+                      'Autocatalysis Present': [],
+                      'ID': []
                       }
     for model in models:
         astr = model["model"]
@@ -134,15 +158,15 @@ def countAllReactions_query(query):
 
 
 def countAllReactions_directory(directory):
-    allModelCounts = {'all totals': [],
-                      'all uni-uni portion': [],
-                      'all uni-bi portion': [],
-                      'all bi-uni portion': [],
-                      'all bi-bi portion': [],
-                      'all degradation portion': [],
-                      'all autocatalysis portion': [],
-                      'has autocatalytic reaction': [],
-                      'all IDs': []
+    allModelCounts = {'Total': [],
+                      'Uni-Uni': [],
+                      'Uni-Bi': [],
+                      'Bi-Uni': [],
+                      'Bi-Bi': [],
+                      'Degradation': [],
+                      'Autocatalysis': [],
+                      'Autocatalysis Present': [],
+                      'ID': []
                       }
     os.chdir(directory)
     for file in os.listdir(directory):
@@ -157,49 +181,47 @@ def countAllReactions_directory(directory):
 
 def updateCounter(reactionDict, allModelCounts, ID):
     for key in reactionDict.keys():
-        newKey = 'all ' + key
         try:
-            allModelCounts[newKey].append(reactionDict[key])
+            allModelCounts[key].append(reactionDict[key])
         except KeyError:
             continue
-    allModelCounts['has autocatalytic reaction'].append(int(reactionDict['autocatalysis'] == 0))
-    allModelCounts['all IDs'].append(ID)
-    allModelCounts['all totals'].append(reactionDict['total'])
+    allModelCounts['Autocatalysis Present'].append(int(reactionDict['Autocatalysis'] > 0))
+    allModelCounts['ID'].append(ID)
     return allModelCounts
 
 
 
 def writeOutCounts(path, allCountsDict):
-
-    # Create and write out dataframe:
     df = pd.DataFrame()
-    df['ID'] = allCountsDict['all IDs']
-    df['Autocatalysis Present'] = allCountsDict['has autocatalytic reaction']
-    df['Portion Degradation'] = allCountsDict['all degradation portion']
-    df['Portion Autocatalysis'] = allCountsDict['all autocatalysis portion']
-    df['Portion Uni-Uni'] = allCountsDict['all uni-uni portion']
-    df['Portion Uni-Bi'] = allCountsDict['all uni-bi portion']
-    df['Portion Bi-Uni'] = allCountsDict['all bi-uni portion']
-    df['Portion Bi-Bi'] = allCountsDict['all bi-bi portion']
-    df['Total Reactions'] = allCountsDict['all totals']
+    df['ID'] = allCountsDict['ID']
+    df['Autocatalysis Present'] = allCountsDict['Autocatalysis Present']
+    df['Autocatalysis'] = allCountsDict['Autocatalysis']
+    df['Portion Degradation'] = allCountsDict['Degradation']
+    df['Uni-Uni'] = allCountsDict['Uni-Uni']
+    df['Uni-Bi'] = allCountsDict['Uni-Bi']
+    df['Bi-Uni'] = allCountsDict['Bi-Uni']
+    df['Bi-Bi'] = allCountsDict['Bi-Bi']
+    df['Total'] = allCountsDict['Total']
     df.set_index('ID')
     df.to_csv(path_or_buf=path)
     return df
 
-def getPValues(path, controldf, oscdf):
-    results = pd.DataFrame()
-    # Binomial test for portion of models containing autocatalytic reactions
-    controlAutoCat = np.mean(controldf['Autocatalysis Present'])
-    oscAutoCat = np.sum(oscdf['Autocatalysis Present'])
-    null_p = controlAutoCat/len(oscdf['Autocatalysis Present'])
-    p_AutocatPresent = binom_test(oscAutoCat, n=len(oscdf['Autocatalysis Present']), p=null_p)
-    results['Population prevalence of autocatalysis'] = p_AutocatPresent
-    # Two sided t test for everything else:
-    for key in controldf.keys():
-        if key != 'Autocatalysis Present' and key != 'ID':
-            results[key] = ttest_ind(controldf[key], oscdf[key])
-    results.to_csv(path_or_buf=path)
-    return results
+
+def pAutocatalysisPortion(control, oscillator):
+    control = list(control)
+    oscillator = list(oscillator)
+    # Make 2x2 contingency table:
+    ###            Num autocatalysis    Num non-autocatalysis
+    #   control        ____                 ____
+    #   oscillator     ____                 ____
+    controlRow = [np.sum(control), len(control)-sum(control)]
+    oscillatorRow = [np.sum(oscillator), len(oscillator) - np.sum(oscillator)]
+    contingencyTable = np.array([controlRow,
+                                oscillatorRow])
+    result = chi2_contingency(contingencyTable)
+    # Return only p value
+    return result
+
 
 def permutationTest(control, treatment):
     control = list(control)
@@ -214,3 +236,10 @@ def permutationTest(control, treatment):
         test_mean_diffs.append(int(mean_diff > true_mean_diff))
     print(np.sum(test_mean_diffs))
     return np.mean(test_mean_diffs)
+
+def makeList(query, key):
+    result = mm.query_database(query)
+    resultList = []
+    for model in result:
+        resultList.append(model[key])
+    return resultList
