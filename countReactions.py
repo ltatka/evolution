@@ -129,7 +129,24 @@ def countReactions(astr):
             continue
     return reactionCounts
 
-
+def gatherCounts_query(query):
+    models = mm.query_database(query)
+    allModelCounts = {'Total': [],
+                      'Uni-Uni': [],
+                      'Uni-Bi': [],
+                      'Bi-Uni': [],
+                      'Bi-Bi': [],
+                      'Degradation': [],
+                      'Degradation Present': [],
+                      'Autocatalysis': [],
+                      'Autocatalysis Present': [],
+                      'ID': []
+                      }
+    for model in models:
+        reactionDict = model["reactionCounts"]
+        # Add the reaction count dictionary info to the overall counting dict
+        allModelCounts = updateCounter(reactionDict, allModelCounts, model["ID"])
+    return allModelCounts
 
 def countAllReactions_query(query):
     models = mm.query_database(query)
@@ -139,6 +156,7 @@ def countAllReactions_query(query):
                       'Bi-Uni': [],
                       'Bi-Bi': [],
                       'Degradation': [],
+                      'Degradation Present': [],
                       'Autocatalysis': [],
                       'Autocatalysis Present': [],
                       'ID': []
@@ -150,6 +168,9 @@ def countAllReactions_query(query):
         # Add the reaction count dictionary to the database
         query = {"ID": ID}
         newEntry = {"$set": {"reactionCounts": reactionDict,
+                             "reactionsCounted": True,
+                             "Autocatalysis Present": reactionDict["Autocatalysis"] > 0,
+                             "Degradation Present": reactionDict["Degradation"] > 0,
                              "reactionsCounted": True}}
         mm.collection.update_one(query, newEntry)
         # Add the reaction count dictionary info to the overall counting dict
@@ -164,6 +185,7 @@ def countAllReactions_directory(directory):
                       'Bi-Uni': [],
                       'Bi-Bi': [],
                       'Degradation': [],
+                      'Degradation Present': [],
                       'Autocatalysis': [],
                       'Autocatalysis Present': [],
                       'ID': []
@@ -186,6 +208,7 @@ def updateCounter(reactionDict, allModelCounts, ID):
         except KeyError:
             continue
     allModelCounts['Autocatalysis Present'].append(int(reactionDict['Autocatalysis'] > 0))
+    allModelCounts['Degradation Present'].append(int(reactionDict['Degradation'] > 0))
     allModelCounts['ID'].append(ID)
     return allModelCounts
 
@@ -196,7 +219,8 @@ def writeOutCounts(path, allCountsDict):
     df['ID'] = allCountsDict['ID']
     df['Autocatalysis Present'] = allCountsDict['Autocatalysis Present']
     df['Autocatalysis'] = allCountsDict['Autocatalysis']
-    df['Portion Degradation'] = allCountsDict['Degradation']
+    df['Degradation'] = allCountsDict['Degradation']
+    df['Degradation Present'] = allCountsDict['Degradation Present']
     df['Uni-Uni'] = allCountsDict['Uni-Uni']
     df['Uni-Bi'] = allCountsDict['Uni-Bi']
     df['Bi-Uni'] = allCountsDict['Bi-Uni']

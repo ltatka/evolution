@@ -463,7 +463,7 @@ if __name__ == "__main__":
     #           "multi": {"item 1": "item 2"},
     #           "key2": "value2"}
 
-    defaultConfig = {"maxGenerations": 1,
+    defaultConfig = {"maxGenerations": 450,
                      "massConserved": False,
                      "toZip": True,
                      "sizeOfPopulation": 10,

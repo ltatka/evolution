@@ -135,6 +135,7 @@ class AntimonyModel(object, metaclass=PostInitCaller):
         rxn = reaction.replace(' ', '')
         reactionSplit = rxn.split('->')
         reactant = reactionSplit[0]
+
         productSplit = reactionSplit[1].split(';')
         product = productSplit[0]
         if '+' in reactant:
