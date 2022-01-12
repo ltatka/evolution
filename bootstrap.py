@@ -2,8 +2,12 @@ import pandas as pd
 import random
 import numpy as np
 
+# oscdf = pd.read_csv("/home/hellsbells/Desktop/equalProbNOAC.csv")
+# controldf = pd.read_csv("/home/hellsbells/Desktop/equalProbAC.csv")
+
 oscdf = pd.read_csv("/home/hellsbells/Desktop/equalProbNOAC.csv")
-controldf = pd.read_csv("/home/hellsbells/Desktop/equalProbAC.csv")
+controldf = oscdf.loc[oscdf['Autocatalysis Present']==0]
+oscdf = oscdf.loc[oscdf['Autocatalysis Present']==1]
 
 uniuni = list(oscdf["Uni-Uni"]/oscdf['Total']) + list(controldf["Uni-Uni"]/controldf['Total'])
 biuni = list(oscdf["Bi-Uni"]/oscdf['Total']) + list(controldf["Bi-Uni"]/controldf['Total'])
@@ -32,7 +36,7 @@ difBibi = []
 difSize = []
 
 for i in range(1000):
-    controlIdx = random.sample(idx, 487)
+    controlIdx = random.sample(idx, len(controldf))
     treatmentId = [x for x in idx if x not in controlIdx]
 
     controlUniUni = []
