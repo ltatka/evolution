@@ -15,11 +15,11 @@ class FitnessEvaluator():
     integrators = ['radu', 'BDF', 'LSODA']
     currentModel = 0
 
-    def __init__(self, configuration=None):
-        if not configuration:
+    def __init__(self, configFile=None):
+        if not configFile:
             self.currentConfig = loadConfiguration()
         else:
-            self.currentConfig = loadConfiguration(configFile=configuration)
+            self.currentConfig = loadConfiguration(configFile=configFile)
 
     def runCvodeSimulation(self, model, timeEnd, numberOfPoints):
         global currentModel
