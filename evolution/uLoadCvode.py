@@ -44,11 +44,11 @@ elif platform == "linux":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "so"
     distribution = id()
     if distribution == "centos":
+        PLATFORM_SHARED_LIBRARY_PREFIX = "lib64"
+        SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib")
+    else: # I guess this is the one that hyak uses...
         PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
         SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib64")
-    else:
-        PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
-        SUNDIALS_LIB_DIR = join(SUNDIALS_INSTALL_PREFIX, "lib")
 elif platform == "darwin":
     PLATFORM_SHARED_LIBRARY_EXTENSION = "dylib"
     PLATFORM_SHARED_LIBRARY_PREFIX = "lib"
