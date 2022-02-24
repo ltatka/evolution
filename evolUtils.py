@@ -6,14 +6,14 @@ Created on Fri Apr 30 15:55:44 2021
 """
 
 from uModel import TModel_
-from teUtils import teUtils as tu
+import modTeUtils as tu
 from uModel import TModel
 from uModel import TReaction
 from numba import jit
 
 import tellurium as te
 import roadrunner
-from teUtils import teUtils as tu
+
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -41,10 +41,10 @@ class PostInitCaller(type):
 
 class Evolver(object, metaclass=PostInitCaller):
 
-    tu.buildNetworks.Settings.ReactionProbabilities.UniUni = 0.1
-    tu.buildNetworks.Settings.ReactionProbabilities.UniBi = 0.4
-    tu.buildNetworks.Settings.ReactionProbabilities.BiUni = 0.4
-    tu.buildNetworks.Settings.ReactionProbabilities.BiBi = 0.1
+    tu.Settings.ReactionProbabilities.UniUni = 0.1
+    tu.Settings.ReactionProbabilities.UniBi = 0.4
+    tu.Settings.ReactionProbabilities.BiUni = 0.4
+    tu.Settings.ReactionProbabilities.BiBi = 0.1
 
     def __init__(self, configuration=None):
         # If no configuration is given, load the default
@@ -65,10 +65,10 @@ class Evolver(object, metaclass=PostInitCaller):
             self.seed = random.randrange(sys.maxsize)
         random.seed(self.seed)
         if self.currentConfig["massConserved"] == "True":
-            tu.buildNetworks.Settings.allowMassViolatingReactions = False
+            tu.Settings.allowMassViolatingReactions = False
         else:
-            tu.buildNetworks.Settings.allowMassViolatingReactions = True
-        tu.buildNetworks.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
+            tu.Settings.allowMassViolatingReactions = True
+        tu.Settings.rateConstantScale = self.currentConfig['rateConstantScale']
 
     def setRandomSeed(self, seed):
         self.seed = seed
@@ -107,10 +107,10 @@ class Evolver(object, metaclass=PostInitCaller):
     def changeReactionProbabilites(self, uniuni, unibi, biuni, bibi):
         if uniuni+unibi+biuni+bibi != 1.0:
             raise ValueError('Probabilities do not add up to 1!')
-        tu.buildNetworks.Settings.ReactionProbabilities.UniUni = uniuni
-        tu.buildNetworks.Settings.ReactionProbabilities.UniBi = unibi
-        tu.buildNetworks.Settings.ReactionProbabilities.BiUni = biuni
-        tu.buildNetworks.Settings.ReactionProbabilities.BiBi = bibi
+        tu.Settings.ReactionProbabilities.UniUni = uniuni
+        tu.Settings.ReactionProbabilities.UniBi = unibi
+        tu.Settings.ReactionProbabilities.BiUni = biuni
+        tu.Settings.ReactionProbabilities.BiBi = bibi
 
     #_________________________________________________________________________________
     #    METHODS FOR INDIVIDUAL EVOLUTION
@@ -122,13 +122,13 @@ class Evolver(object, metaclass=PostInitCaller):
         rt = random.randint(0, 3)  # Reaction type
         reaction = TReaction()
         reaction.reactionType = rt
-        if rt == tu.buildNetworks.TReactionType.UniUni:
+        if rt == tu.TReactionType.UniUni:
             r1 = [random.choice(floats)]
             p1 = [random.choice(floats)]
             reaction.reactant1 = r1[0]
             reaction.product1 = p1[0]
 
-        if rt == tu.buildNetworks.TReactionType.BiUni:
+        if rt == tu.TReactionType.BiUni:
             r1 = [random.choice(floats), random.choice(floats)]
             p1 = [random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -143,7 +143,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 if count > 50:  # quit trying after 50 attempts
                     return model
 
-        if rt == tu.buildNetworks.TReactionType.UniBi:
+        if rt == tu.TReactionType.UniBi:
             r1 = [random.choice(floats)]
             p1 = [random.choice(floats), random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -158,7 +158,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 if count > 50:  # quit trying after 50 attempts
                     return model
 
-        if rt == tu.buildNetworks.TReactionType.BiBi:
+        if rt == tu.TReactionType.BiBi:
             r1 = [random.choice(floats), random.choice(floats)]
             p1 = [random.choice(floats), random.choice(floats)]
             reaction.reactant1 = r1[0]
@@ -229,7 +229,7 @@ class Evolver(object, metaclass=PostInitCaller):
         return population
 
     def makeModel(self, nSpecies, nReactions):
-        model = tu.buildNetworks.getRandomNetworkDataStructure(nSpecies, nReactions)
+        model = tu.getRandomNetworkDataStructure(nSpecies, nReactions)
         nFloats = len(model[0])
         nBoundary = len(model[1])
         model.insert(0, nFloats)
@@ -248,11 +248,11 @@ class Evolver(object, metaclass=PostInitCaller):
             reaction.reactionType = r[0]
 
             reaction.reactant1 = r[1][0]
-            if reaction.reactionType == tu.buildNetworks.TReactionType.BiUni or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+            if reaction.reactionType == tu.TReactionType.BiUni or reaction.reactionType == tu.TReactionType.BiBi:
                 reaction.reactant2 = r[1][1]
 
             reaction.product1 = r[2][0]
-            if reaction.reactionType == tu.buildNetworks.TReactionType.UniBi or reaction.reactionType == tu.buildNetworks.TReactionType.BiBi:
+            if reaction.reactionType == tu.TReactionType.UniBi or reaction.reactionType == tu.TReactionType.BiBi:
                 reaction.product2 = r[2][1]
 
             reaction.rateConstant = r[3]
