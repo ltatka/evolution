@@ -2,7 +2,7 @@ import modTeUtils as tu
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-import readObjData
+
 import evalFitness
 from uModel import TModel_
 import sys, os, math, json, time, zipfile
@@ -30,8 +30,8 @@ class Evolver(object, metaclass=PostInitCaller):
         else:
             self.currentConfig = loadConfiguration(configFile=configuration)
         self.builder = tu # Evolver's instance of teUtils for preserving settings
-        self.objectiveData = readObjectiveFunction()
-        self.fitnessEvaluator = evalFitness.FitnessEvaluator(configuration)
+        # self.objectiveData = readObjectiveFunction()
+        # self.fitnessEvaluator = evalFitness.FitnessEvaluator(configuration)
         self.makeTracker()
         self.setReactionProbabilities([0.1, 0.4, 0.4, 0.1])  # Set default reaction probabilites
 
@@ -59,7 +59,7 @@ class Evolver(object, metaclass=PostInitCaller):
 
     def loadNewConfig(self, configFile):
         self.currentConfig = loadConfiguration(configFile=configFile)
-        self.fitnessEvaluator = evalFitness.FitnessEvaluator(configFile=configFile)
+        # self.fitnessEvaluator = evalFitness.FitnessEvaluator(configFile=configFile)
 
     def setMaxGeneration(self, maxNumber):
         self.currentConfig["maxGenerations"] = maxNumber
@@ -238,8 +238,8 @@ class Evolver(object, metaclass=PostInitCaller):
             # if keyboard.is_pressed("q"):
             #   print ("keyboard break")
             #   sys.exit()
-            self.fitnessEvaluator.computeFitnessOfIndividual(index, model, self.objectiveData)
-
+            evalFitness.computeFitnessOfIndividual(index, model, self.currentConfig['initialConditions'])
+            #TODO Store fitness somewhere?
     # _________________________________________________________________________________
     #    METHODS FOR MANAGING POPULATIONS
     # _________________________________________________________________________________
@@ -448,7 +448,8 @@ class Evolver(object, metaclass=PostInitCaller):
         count = 0
         for i in range(n):
             for j in range(n):
-                t, y = self.fitnessEvaluator.runSimulation(population[count], 1.25, 100)
+                t, y = self.fitnessEvaluator.runSimulation(population[count], 1.25, 100,
+                                                           self.currentConfig['initialConditions'])
                 axs[i, j].plot(t, y)
                 count += 1
 
@@ -526,28 +527,7 @@ def convertToAntimony2(model):
     return astr
 
 
-def readObjectiveFunction():
-    result = readObjData.ObjectiveFunctionData()
-    f = open("objectivefunction.txt", "r")
 
-    astr = f.readline()  # Dump the first comment line
-
-    astr = f.readline()
-    aList = astr.split()
-    result.timeStart = float(aList[1])
-
-    astr = f.readline();
-    aList = astr.split();
-    result.timeEnd = float(aList[1])
-
-    astr = f.readline()
-    aList = astr.split()
-    result.numberOfPoints = int(aList[1])
-
-    for i in range(result.numberOfPoints):
-        result.outputData.append(float(f.readline()))
-    f.close()
-    return result
 
 
 def convertToAntimony(model):
