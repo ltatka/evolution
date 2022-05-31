@@ -234,16 +234,15 @@ class Evolver(object, metaclass=PostInitCaller):
         return nth, change
 
     def computeFitness(self, population):
-        for index, model in enumerate(population):
-            # if keyboard.is_pressed("q"):
-            #   print ("keyboard break")
-            #   sys.exit()
-            evalFitness.computeFitnessOfIndividual(index, model, self.currentConfig['initialConditions'])
-            #TODO Store fitness somewhere?
+        for model in population:
+            # Fitness is stored in the individual model object
+            evalFitness.computeFitnessOfIndividual(model, self.currentConfig['initialConditions'])
+
+
+
     # _________________________________________________________________________________
     #    METHODS FOR MANAGING POPULATIONS
     # _________________________________________________________________________________
-
 
     def makePopulation(self):
         population = []

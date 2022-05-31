@@ -45,7 +45,7 @@ def runSimulation(model, timeEnd, numberOfPoints, initialConditions):
         raise
 
 
-def computeFitnessOfIndividual(index, model, initialConditions):
+def computeFitnessOfIndividual(model, initialConditions):
     # Run eval to get next time step and next values for y
     global objFunctionData
     numberOfPoints = objFunctionData.numberOfPoints
