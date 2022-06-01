@@ -26,6 +26,8 @@ cd sundials
 
 mkdir build
 cd build
+ 
+# If you are using the cluster, use 'module load cmake' here 
 
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../../sundials-install-<platform> ..
 cmake --build . --target install --config Release -j 12
