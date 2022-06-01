@@ -335,13 +335,13 @@ class Evolver(object, metaclass=PostInitCaller):
                 self.savePopulation(population)
                 self.printProgress(i, population)
                 if population[0].fitness <= self.currentConfig['threshold']:
-                    saveFileName = os.path.join(os.getcwd(), f"{str(self.seed)}")
+                    saveFileName = f"{str(self.seed)}"
                     self.saveRun(saveFileName, population)
                     print("\n\nSUCCESS!\n")
                     break
             if population[0].fitness > self.currentConfig['threshold']:
                 print("\n\nFAIL\n")
-                saveFileName = os.path.join(os.getcwd(), f"FAIL_{str(self.seed)}")
+                saveFileName = f"FAIL_{str(self.seed)}"
                 self.saveRun(saveFileName, population)
             self.printSummary(population)
         except KeyboardInterrupt:
@@ -368,6 +368,10 @@ class Evolver(object, metaclass=PostInitCaller):
 
 
     def saveRun(self, saveFileName, population):
+        save_directory = os.path.join(os.path.dirname(os.getcwd()), "saved_models/")
+        if not os.path.isdir(save_directory):
+            os.mkdir(save_directory)
+        saveFileName = save_directory + saveFileName
         if self.currentConfig["toZip"] == "False":
             saveFileName = saveFileName + ".ant"
             astr = convertToAntimony2(population[0])
