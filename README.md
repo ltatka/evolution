@@ -80,3 +80,29 @@ To use your new configuration, pass it as an optional argument when running batc
 ```
 python batchrun.py --newConfigFile <yourNewConfig>.json
 ```
+# Error Fixes
+ If you build and run the program on the cluster and come across this error:
+ ![image](https://user-images.githubusercontent.com/63520222/171741202-c1610d8a-0ba5-4c54-af42-0fec5675debf.png)
+ 
+ This is annoying but the way I ended up fixing this was to clone the sundials repo from https://github.com/LLNL/sundials.git
+And then build using the following commands:
+ ```
+ cd sundials
+ 
+ mkdir builddir
+ cd builddir
+ 
+ cmake -DCMAKE_INSTALL_PREFIX=../install-release -DCMAKE_BUILD_TYPE=Release -DEXAMPLES_ENABLE=ON -DBUILD_SHARED_LIBS=ON ..
+
+ make -j12
+
+ make install
+```
+ You might want to check if this version of sundials works by running one of the examples.
+ 
+ Building sundials will create a directory called ```install-release```. Note the location of this directory. 
+ 
+ Then go back into the evolution directory and edit the uLoadCvode.py file. Edit the file so that the variable SUNDIALS_INSTALL_PREFIX is the path to the install-release directory. 
+ 
+ This is super sketchy and I'll maybe make a more official fix later, but writing this down in case this issue comes up again.
+ 
