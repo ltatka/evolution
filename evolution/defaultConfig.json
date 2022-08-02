@@ -1,5 +1,5 @@
-{"maxGenerations": 100,
-  "sizeOfPopulation": 3,
+{"maxGenerations": 400,
+  "sizeOfPopulation": 40,
   "allowAutocatalysis": "False",
   "massConserved": "False",
   "toZip": "True",
