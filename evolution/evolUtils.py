@@ -241,11 +241,11 @@ class Evolver(object, metaclass=PostInitCaller):
             else:
                 n, change = self.mutateRateConstant(newModel)
                 newModel.reactions[n].rateConstant += change
-            evalFitness.computeFitnessOfIndividual(newModel, self.currentConfig['initialConditions'])
         else:  # If there's a seeded model, then only change rate constants
             n, change = self.mutateRateConstant(newModel)
             newModel.reactions[n].rateConstant += change
         # If the new model is better, keep it. Otherwise reject 75% of the time
+        evalFitness.computeFitnessOfIndividual(newModel, self.currentConfig['initialConditions'])
         if newModel.fitness < model.fitness or random.random() > 1 - pAcceptWorse:
             return newModel
         else:
