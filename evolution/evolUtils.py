@@ -38,8 +38,7 @@ class Evolver(object, metaclass=PostInitCaller):
 
     def post_init(self):
         self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
-        self.remainder = self.currentConfig["sizeOfPopulation"] - \
-                         math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
+        self.remainder = self.currentConfig["sizeOfPopulation"] - self.topElite
         self.seed = self.currentConfig['seed']
         if self.seed == -1:
             self.seed = random.randrange(sys.maxsize)
@@ -234,6 +233,25 @@ class Evolver(object, metaclass=PostInitCaller):
         change = random.uniform(-x, x)
         return nth, change
 
+    def mutateModel(self, model, pAcceptWorse=0.25):
+        newModel = uModel.clone(model)
+        if self.antimony is None:
+            if random.random() > self.currentConfig['probabilityMutateRateConstant']:
+                self.mutateReaction(newModel)
+            else:
+                n, change = self.mutateRateConstant(newModel)
+                newModel.reactions[n].rateConstant += change
+            evalFitness.computeFitnessOfIndividual(newModel, self.currentConfig['initialConditions'])
+        else:  # If there's a seeded model, then only change rate constants
+            n, change = self.mutateRateConstant(newModel)
+            newModel.reactions[n].rateConstant += change
+        # If the new model is better, keep it. Otherwise reject 75% of the time
+        if newModel.fitness < model.fitness or random.random() > 1 - pAcceptWorse:
+            return newModel
+        else:
+            return model
+
+
     def computeFitness(self, population):
         for model in population:
             # Fitness is stored in the individual model object
@@ -247,9 +265,18 @@ class Evolver(object, metaclass=PostInitCaller):
 
     def makePopulation(self):
         population = []
-        for i in range(self.currentConfig['sizeOfPopulation']):
-            amodel = self.makeModel(self.currentConfig['numSpecies'], self.currentConfig['numReactions'])
-            population.append(amodel)
+        if self.antimony is None:
+            for i in range(self.currentConfig['sizeOfPopulation']):
+                amodel = self.makeModel(self.currentConfig['numSpecies'], self.currentConfig['numReactions'])
+                population.append(amodel)
+        else:
+            model = convertToTModel(self.antimony)
+            evalFitness.computeFitnessOfIndividual(model, self.currentConfig['initialConditions'])
+            population.append(model)
+            for i in range(1, self.currentConfig['sizeOfPopulation']):
+                nextModel = uModel.clone(model)
+                model = self.mutateModel(nextModel, pAcceptWorse=1)
+                population.append(nextModel)
         return population
 
     def makeModel(self, nSpecies, nReactions):
@@ -288,7 +315,7 @@ class Evolver(object, metaclass=PostInitCaller):
         return amodel
 
     def getNextGen(self, population):
-        self.computeFitness(population)
+        # self.computeFitness(population) This is computed in the selection step
         # Sort the population according to fitness
         population.sort(key=lambda x: x.fitness)
         newPopulation = []
@@ -311,11 +338,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 model = uModel.clone(population[r1])
             else:
                 model = uModel.clone(population[r2])
-            if random.random() > self.currentConfig['probabilityMutateRateConstant']:
-                self.mutateReaction(model)
-            else:
-                n, change = self.mutateRateConstant(model)
-                model.reactions[n].rateConstant += change
+            model = self.mutateModel(model)
             selectedPopulation.append(model)
         return selectedPopulation
 
@@ -330,6 +353,8 @@ class Evolver(object, metaclass=PostInitCaller):
         self.printCurrentConfig()
         self.makeTracker()
         population = self.makePopulation()
+        if self.antimony is None:
+            self.computeFitness(population)  # Only need to do this once because fitness is computed during selection
         try:
             for i in range(self.currentConfig['maxGenerations']):
                 population = self.getNextGen(population)
@@ -558,10 +583,10 @@ def convertToTModel(antimony):
         reaction.rateConstant = convertRateLine(rates_preprocess[i])
         reactions.append(reaction)
 
-    model = TModel_()
-    model.nFloats = nFloats
-    model.nBoundary = nBoundary
-    model.initialCond = initialConditions
+    model = uModel.TModel()
+    model.numFloats = nFloats
+    model.numBoundary = nBoundary
+    model.initialConditions = initialConditions
     model.reactions = reactions
     model.fitness = 10E17
     model.cvode = TCvode(uLoadCvode.CV_BDF)
@@ -590,20 +615,20 @@ def convertReactionLine(line):
 
 
     reaction = TReaction()
-    reaction.reactant1 = reactants[0]
-    reaction.product1 = products[0]
+    reaction.reactant1 = int(reactants[0])
+    reaction.product1 = int(products[0])
 
     #Get Reaction Type:
     if len(reactants) == 2:
-        reaction.reactant2 = reactants[1]
+        reaction.reactant2 = int(reactants[1])
         if len(products) == 2:
-            reaction.product2 = products[1]
+            reaction.product2 = int(products[1])
             reaction.reactionType = 3  # bibi
         else:
             reaction.reactionType = 1  # biuni
     else:
         if len(products) == 2:
-            reaction.product2 = products[1]
+            reaction.product2 = int(products[1])
             reaction.reactionType = 2  # unibi
         else:
             reaction.reactionType = 0  #unini

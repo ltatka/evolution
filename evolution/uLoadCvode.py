@@ -14,11 +14,11 @@ CV_SUCCESS = 0
 # sundials is a submodule.
 parent_dir = Path(dirname(__file__)) # top level root directory)
 PROJ_ROOT = parent_dir.parent.absolute()
-print(f" Root: {PROJ_ROOT}")
+#print(f" Root: {PROJ_ROOT}")
 
 #SUNDIALS_SRC = join(PROJ_ROOT, "sundials")  # sundials source directory
 SUNDIALS_INSTALL_PREFIX = join(PROJ_ROOT, f"sundials-install-{platform}")
-print(f"Sundials install prefix: {SUNDIALS_INSTALL_PREFIX}")
+#print(f"Sundials install prefix: {SUNDIALS_INSTALL_PREFIX}")
 
 
 # print(f"INstall prefix: {SUNDIALS_INSTALL_PREFIX}")
