@@ -157,7 +157,7 @@ if __name__ == "__main__":
     for i in range(sizeOfPopulation):
         amodel = makeModel(currentConfig['numSpecies'], currentConfig['numReactions'])
         saveFileName = 'RANDOM_' + str(i) + '.ant'
-        astr = evolUtils.convertToAntimony2(amodel)
+        astr = evolUtils.convertToAntimony(amodel)
         with open(saveFileName, "w") as f:
             f.write(astr)
             f.close()

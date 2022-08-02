@@ -23,7 +23,7 @@ class PostInitCaller(type):
 class Evolver(object, metaclass=PostInitCaller):
 
 
-    def __init__(self, configuration=None, probabilities = None):
+    def __init__(self, configuration=None, antimony = None, probabilities = None):
         # If no configuration is given, load the default
         if not configuration:
             self.currentConfig = loadConfiguration()
@@ -33,7 +33,8 @@ class Evolver(object, metaclass=PostInitCaller):
         # self.objectiveData = readObjectiveFunction()
         # self.fitnessEvaluator = evalFitness.FitnessEvaluator(configuration)
         self.makeTracker()
-        self.setReactionProbabilities([0.1, 0.4, 0.4, 0.1])  # Set default reaction probabilites
+        self.setReactionProbabilities([0.1, 0.4, 0.4, 0.1])  # Set default reaction probabilities
+        self.antimony = antimony # If we're evolving parameters only, this is the seed
 
     def post_init(self):
         self.topElite = math.trunc(self.currentConfig['percentageCloned'] * self.currentConfig['sizeOfPopulation'])
@@ -305,7 +306,7 @@ class Evolver(object, metaclass=PostInitCaller):
             # pick two models at random, then pick the best and mutate it
             r1 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
             r2 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
-
+            # TODO: Allow worse models to get accepted from time to time?
             if population[r1].fitness < population[r2].fitness:
                 model = uModel.clone(population[r1])
             else:
@@ -374,7 +375,7 @@ class Evolver(object, metaclass=PostInitCaller):
         saveFileName = save_directory + saveFileName
         if self.currentConfig["toZip"] == "False":
             saveFileName = saveFileName + ".ant"
-            astr = convertToAntimony2(population[0])
+            astr = convertToAntimony(population[0])
             with open(saveFileName, "w") as f:
                 f.write(astr)
                 f.close()
@@ -385,7 +386,7 @@ class Evolver(object, metaclass=PostInitCaller):
                 json_string = json.dumps(self.tracker["fitnessArray"])
                 zf.writestr("fitnessList.txt", json_string)
 
-                astr = convertToAntimony2(population[0])
+                astr = convertToAntimony(population[0])
                 zf.writestr("best_antimony.ant", astr)
                 zf.writestr("seed_" + str(self.seed) + ".txt", str(self.seed))
                 zf.writestr("config.txt", json.dumps(self.currentConfig) + '\n')
@@ -412,7 +413,7 @@ class Evolver(object, metaclass=PostInitCaller):
                     for j in range(len(pop)):
                         fileName = "populations/generation_" + str(index) + '/individual_' + str(j) + '.txt'
                         popSummary = '# Fitness = ' + str(pop[j].fitness) + '\n'
-                        popSummary += convertToAntimony2(pop[j]);
+                        popSummary += convertToAntimony(pop[j]);
                         zf.writestr(fileName, popSummary)
             finally:
                 zf.close()
@@ -482,7 +483,7 @@ class Evolver(object, metaclass=PostInitCaller):
 
 
 
-def convertToAntimony2(model):
+def convertToAntimony(model):
     nFloats = model.numFloats
     nBoundary = model.numBoundary
     reactions = model.reactions
@@ -529,56 +530,102 @@ def convertToAntimony2(model):
 
     return astr
 
+def convertToTModel(antimony):
+    nFloats = 0
+    nBoundary = 0
+    reactions_preprocess = []
+    rates_preprocess = []
+    initialConditions = []
+    reactions = []
+    lines = antimony.split("\n")
+    for line in lines:
+        if line.startswith('#'):
+            continue
+        if line.startswith('var'):
+            nFloats += 1
+        elif line.startswith('ext'):
+            nBoundary += 1
+        elif '->' in line:
+            reactions_preprocess.append(line)
+        elif line.startswith('k'):
+            rates_preprocess.append(line)
+        elif line.startswith("S"):
+            line = line.replace(" ", "")
+            initialConditions.append(float(line.split("=")[1]))
+
+    for i, r in enumerate(reactions_preprocess):
+        reaction = convertReactionLine(r)
+        reaction.rateConstant = convertRateLine(rates_preprocess[i])
+        reactions.append(reaction)
+
+    model = TModel_()
+    model.nFloats = nFloats
+    model.nBoundary = nBoundary
+    model.initialCond = initialConditions
+    model.reactions = reactions
+    model.fitness = 10E17
+    model.cvode = TCvode(uLoadCvode.CV_BDF)
+    return model
+
+def convertRateLine(line):
+    line = line.replace(" ", "")
+    k = line.split("=")[1]
+    k = k.split("#")[0]
+    return float(k)
+
+
+def convertReactionLine(line):
+    '''
+    UniUni = 0
+    BiUni = 1
+    UniBi = 2
+    BiBi = 3
+    '''
+    line = line.replace(" ", "")  #remove spaces
+    line = line.replace("S","")  #remove species label S
+    reactants, products = line.split("->")
+    products = products.split(';')[0]
+    reactants = reactants.split('+')
+    products = products.split('+')
+
+
+    reaction = TReaction()
+    reaction.reactant1 = reactants[0]
+    reaction.product1 = products[0]
+
+    #Get Reaction Type:
+    if len(reactants) == 2:
+        reaction.reactant2 = reactants[1]
+        if len(products) == 2:
+            reaction.product2 = products[1]
+            reaction.reactionType = 3  # bibi
+        else:
+            reaction.reactionType = 1  # biuni
+    else:
+        if len(products) == 2:
+            reaction.product2 = products[1]
+            reaction.reactionType = 2  # unibi
+        else:
+            reaction.reactionType = 0  #unini
+    return reaction
 
 
 
 
-def convertToAntimony(model):
-    nFloats = model[TModel_.nFloats]
-    nBoundary = model[TModel_.nBoundary]
-    boundaryList = model[TModel_.boundaryList]
-    fullList = model[TModel_.fullSpeciesList]
-    reactions = model[TModel_.reactionList]
-    nReactions = model[TModel_.reactionList][0]
-    astr = ''
-    for f in fullList[:nFloats]:
-        astr += 'var S' + str(f) + '\n'
+ant = '''var S0
+var S1
+var S2
+S1 + S2 -> S2 + S2; k0*S1*S2
+S1 + S0 -> S1 + S1; k1*S1*S0
+S1 -> S1+S0; k2*S1
+S2 + S0 -> S0; k3*S2*S0
+k0 = 1.9920416329912947
+k1 = 47.54258428799684
+k2 = 26.347064160356418
+k3 = 32.59216460314004
+S0 = 1.0
+S1 = 5.0
+S2 = 9.0
+'''
+model = convertToTModel(ant)
 
-    for b in boundaryList:
-        astr += 'ext S' + str(b) + '\n'
-
-    for i in range(nReactions):
-        reaction = reactions[i + 1]
-        if reaction[0] == tu.TReactionType.UniUni:
-            S1 = 'S' + str(reaction[1][0])
-            S2 = 'S' + str(reaction[2][0])
-            astr += S1 + ' -> ' + S2
-            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.TReactionType.BiUni:
-            S1 = 'S' + str(reaction[1][0])
-            S2 = 'S' + str(reaction[1][1])
-            S3 = 'S' + str(reaction[2][0])
-            astr += S1 + ' + ' + S2 + ' -> ' + S3
-            astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-        if reaction[0] == tu.TReactionType.UniBi:
-            S1 = 'S' + str(reaction[1][0])
-            S2 = 'S' + str(reaction[2][0])
-            S3 = 'S' + str(reaction[2][1])
-            astr += S1 + ' -> ' + S2 + '+' + S3
-            astr += '; k' + str(i) + '*' + S1 + '\n'
-        if reaction[0] == tu.TReactionType.BiBi:
-            S1 = 'S' + str(reaction[1][0])
-            S2 = 'S' + str(reaction[1][1])
-            S3 = 'S' + str(reaction[2][0])
-            S4 = 'S' + str(reaction[2][1])
-            astr += S1 + ' + ' + S2 + ' -> ' + S3 + ' + ' + S4
-            astr += '; k' + str(i) + '*' + S1 + '*' + S2 + '\n'
-
-    for i in range(nReactions):
-        reaction = reactions[i + 1]
-        astr += 'k' + str(i) + ' = ' + str(reaction[3]) + '\n'
-    initCond = model[TModel_.initialCond]
-    for i in range(nFloats + nBoundary):
-        astr += 'S' + str(fullList[i]) + ' = ' + str(initCond[i]) + '\n'
-
-    return astr
