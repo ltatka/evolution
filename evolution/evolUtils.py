@@ -320,12 +320,30 @@ class Evolver(object, metaclass=PostInitCaller):
         population.sort(key=lambda x: x.fitness)
         newPopulation = []
         self.tracker["fitnessArray"].append(population[0].fitness)
-        newPopulation.append(uModel.clone(population[0]))
-        for i in range(self.topElite - 1):
+        for i in range(self.topElite):
             newPopulation.append(uModel.clone(population[i]))
         selections = self.tournamentSelect(population)
         newPopulation = newPopulation + selections
         return newPopulation
+
+    # def tournamentSelect(self, population):
+    #     selectedPopulation = []
+    #     for i in range(self.remainder):
+    #         # pick two models at random, then pick the best and mutate it
+    #         r1 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
+    #         r2 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
+    #         if population[r1].fitness < population[r2].fitness:
+    #             model = uModel.clone(population[r1])
+    #         else:
+    #             model = uModel.clone(population[r2])
+    #         # If the model is already in the elite bracket, then always mutate it to avoid having a bunch
+    #         # of duplicate models
+    #         if r1 in range(self.topElite) or r2 in range(self.topElite):
+    #             model = self.mutateModel(model, pAcceptWorse=1)
+    #         else:
+    #             model = self.mutateModel(model)
+    #         selectedPopulation.append(model)
+    #     return selectedPopulation
 
     def tournamentSelect(self, population):
         selectedPopulation = []
@@ -333,7 +351,6 @@ class Evolver(object, metaclass=PostInitCaller):
             # pick two models at random, then pick the best and mutate it
             r1 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
             r2 = random.randint(1, self.currentConfig["sizeOfPopulation"] - 1)
-            # TODO: Allow worse models to get accepted from time to time?
             if population[r1].fitness < population[r2].fitness:
                 model = uModel.clone(population[r1])
             else:
@@ -341,6 +358,8 @@ class Evolver(object, metaclass=PostInitCaller):
             model = self.mutateModel(model)
             selectedPopulation.append(model)
         return selectedPopulation
+
+
 
     def clonePopulation(self, population):
         p = []
@@ -358,6 +377,9 @@ class Evolver(object, metaclass=PostInitCaller):
         try:
             for i in range(self.currentConfig['maxGenerations']):
                 population = self.getNextGen(population)
+                print(f"GENERATION {i}")
+                for j in range(10):
+                    print(population[j].fitness)
                 self.savePopulation(population)
                 self.printProgress(i, population)
                 if population[0].fitness <= self.currentConfig['threshold']:
